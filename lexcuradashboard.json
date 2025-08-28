@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "lexcuradashboard",
+  "private_key_id": "267ba6cfeb6879d66356af7edd6de77958a10ffd",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCxIjc+xMTg2x/0\nYX5Rl192DLk0S1A4nZjsRgLc017UYf7IOY1WohBYwKyYldNPrEZvhjrdZ4VrB4ek\nSMU17AHWxaNgC24FhXpDqTkkB6mza+cXk4yMdrLhqpWpdnPfiPGzG5hCaaWGJWCt\nk4qmnt/lNRRkO62ftI05ZdJzvp0QSdVhAwCi2TW7DVsdqw9dkzJxki70imhyJSgw\nvV21HlK5xGTniNtcFyjQaBdTkufFrpG6wmknX0NvDMs7RRN54vGghzy5yGvVH8aW\nqjgEOOqbCYWmZGFlKh9pBA1hj0q6HCz0NtsetFI4YpxVT5giiZJU3OyFS1wtQ5UZ\n8kYBRa4PAgMBAAECggEAEFBqbimJSHxmEQf5rmIWtLSvShW1qcE6GGjKUrRVA5KS\n+LX0Qopinwn/233RHIFta1Adk865BwaGg6cAIts9wB4r0ei7lV6ZyCmJzbu28YN6\noT1BsJ4uE4K2jgkO2wOt3yUnfNZmHFjM8q+oEXiIfn/JBQJKF291oleybl6b8Kf0\n0M9ye9OgsoZ7Qn/K1sGVQmW1DCq/bkoFClWjiPg+0DzPN5HAUixBknn0iIdgj0Dw\nKEF5Y8pCFTVzwsrfavGaRo3r/r9wBpoUlwUtVqIl8FOVIZREN//yAHwefMuEASDB\nWpnvCpmoyCp4Uzu/qmHW64InT8j3CeNQGYmutDPngQKBgQDo9n218Z827lep51Pm\nFII7+GDvo9ihBrduTAt39kctVhXnNBB4VuwRwXJ/WkLpoER0mK8xIFoetCegoP6M\nnOLiZtZanW5ywKjBoptx4oHbym7mDA/m5KmT4NqlMQRLnb6nvdXyoaKSddE9dmN7\nJQdVxSVDr/zbojlkISyapes43wKBgQDCpmVCEi0UbGJRqI3mrM1Fs0GOoaAnDr0m\ndBqpPWhf5dF2OG8PjmPDebA/0iCdVbNtU4sXO0luuDNVWAAyz2KS3buh9IIP5WIE\nZdEtHdW9crlEnzDGqbhGTAQguo1Wc98ySA1fDObaqCJmQ1nsNfAdHoQi5eulk0C7\n4MatUAvA0QKBgGEoC52Ju2DpXd4Z/7+A5h+koqjOqFXfuzhgtpe9OkoKEPBvoj7N\n4X42M04xkp5knKgT1VyjpXIQqEYxXne+JlFNmjAIYDuzZa375uBEGuxTLJT8itU8\noAxwRj+GhcgTbaP/Y+7gwjBaunzrlumQs9JtefEUwFvI+C5uN2/3qnX5AoGABxex\nENtAsUHRw0/0+7bINAX4GY5iG4o58jDA1/HY38WsADbGNTbnA7Rna6vobFM3GoC0\nzL/oSRSFKlLujutnmBpkP9587r9Y9vgOyyoPI7wObCWwzUxZ3pXegKLLi57lPxvJ\nAPGjZ8xAlKFXoXfFrAn0nqDqGTpoXXAvTRlhlEECgYAGlVjcM5jhqbF1vX0CDHLN\nIqLys1qci+NdjiLIG7rZuU9hfwH55uOfACqTTuAP1b/BITEstzfR993f3UCbP5x2\nPn6EcJ94nzq6BC0b+qQ+pjeadxjJsHbZFJP18aEhoKr8jCQ5EeJhsWjzSxGdkqis\ngmd86AzvMwVy+vRAEKMU5w==\n-----END PRIVATE KEY-----\n",
+  "client_email": "lexcuradashboard@lexcuradashboard.iam.gserviceaccount.com",
+  "client_id": "106779614776933259932",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/lexcuradashboard%40lexcuradashboard.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
