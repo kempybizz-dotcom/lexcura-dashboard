@@ -1,1557 +1,912 @@
-"""
-Fortune 500 Executive Dashboard - LexCura Elite
-Premium legal compliance analytics platform
-Replicating Pinterest design reference with executive color palette
-
-Version: 3.0.0 Executive
-Built for Fortune 500 leadership and C-suite decision making
-"""
-
-import streamlit as st
-import pandas as pd
-import numpy as np
+import dash
+from dash import dcc, html, Input, Output, callback
 import plotly.graph_objects as go
 import plotly.express as px
-from plotly.subplots import make_subplots
-import plotly.io as pio
-import json
-import hashlib
-import secrets
-import time
-from datetime import datetime, timedelta, date
-from typing import Dict, List, Optional, Tuple, Any, Union
-import io
-import base64
-from pathlib import Path
-import uuid
-import re
-from dataclasses import dataclass
-from enum import Enum
-import logging
-import calendar
+from datetime import datetime, timedelta
+import pandas as pd
+import numpy as np
+import os
 
-# ============================================================================
-# EXECUTIVE CONFIGURATION & CONSTANTS
-# ============================================================================
+# Initialize the Dash app
+app = dash.Dash(__name__, suppress_callback_exceptions=True)
+server = app.server  # Required for Render deployment
 
-class ExecutivePalette:
-    """Fortune 500 Executive Color Palette - Exact Match Required"""
-    CHARCOAL_BG = "#0F1113"           # Background
-    DARK_CARD = "#1B1D1F"             # Card backgrounds  
-    LIGHT_CARD = "#252728"            # Light cards
-    METALLIC_GOLD = "#D4AF37"         # Primary accent (replaces blue)
-    GOLD_HIGHLIGHT = "#FFCF66"        # Bright accent (replaces bright blue)
-    NEUTRAL_TEXT = "#B8B9BB"          # Body text
-    HIGH_CONTRAST = "#F5F6F7"         # Headers/white text
-    ERROR_SUBTLE = "#E4574C"          # Error states
-    SUCCESS_SUBTLE = "#3DBC6B"        # Success states
-    
-    # Additional semantic colors
-    WARNING = "#F59E0B"
-    INFO = "#3B82F6" 
-    
-    # Gradient definitions
-    GOLD_GRADIENT = f"linear-gradient(135deg, {METALLIC_GOLD} 0%, {GOLD_HIGHLIGHT} 100%)"
-    CARD_GRADIENT = f"linear-gradient(145deg, {DARK_CARD} 0%, {LIGHT_CARD} 100%)"
+# Color palette - strictly enforced
+COLORS = {
+    'charcoal': '#0F1113',
+    'dark_grey': '#1B1D1F',
+    'gold_primary': '#D4AF37',
+    'highlight_gold': '#FFCF66',
+    'neutral_text': '#B8B9BB',
+    'success_green': '#3DBC6B',
+    'danger_red': '#E4574C',
+    'warning_orange': '#F4A261'
+}
 
-class ExecutiveConfig:
-    """Executive Application Configuration"""
-    APP_NAME = "LexCura Elite"
-    APP_SUBTITLE = "Executive Legal Intelligence Platform"
-    VERSION = "3.0.0 Executive"
-    COMPANY = "LexCura Executive Services"
-    SUPPORT_EMAIL = "executive@lexcura.com"
-    LOGO_PATH = "assets/lexcuralogo.png"
-    SESSION_TIMEOUT = 3600
-    MAX_LOGIN_ATTEMPTS = 3
-    CACHE_TTL = 300
-
-class UserRole(Enum):
-    """User Access Levels"""
-    EXECUTIVE = "executive"
-    DIRECTOR = "director" 
-    MANAGER = "manager"
-    ANALYST = "analyst"
-    VIEWER = "viewer"
-
-@dataclass
-class User:
-    """User Profile Structure"""
-    username: str
-    email: str
-    role: UserRole
-    full_name: str
-    avatar_url: Optional[str] = None
-    last_login: Optional[datetime] = None
-    login_count: int = 0
-
-# ============================================================================
-# PLOTLY THEME SYSTEM
-# ============================================================================
-
-def register_executive_plotly_theme():
-    """Register custom executive Plotly theme matching design"""
-    executive_theme = {
-        "layout": {
-            "paper_bgcolor": ExecutivePalette.CHARCOAL_BG,
-            "plot_bgcolor": "rgba(0,0,0,0)",
-            "colorway": [
-                ExecutivePalette.METALLIC_GOLD,
-                ExecutivePalette.GOLD_HIGHLIGHT,
-                ExecutivePalette.SUCCESS_SUBTLE,
-                ExecutivePalette.HIGH_CONTRAST,
-                ExecutivePalette.ERROR_SUBTLE,
-                ExecutivePalette.WARNING,
-                ExecutivePalette.INFO
-            ],
-            "font": {
-                "family": "Inter, 'Helvetica Neue', -apple-system, system-ui, sans-serif",
-                "color": ExecutivePalette.HIGH_CONTRAST,
-                "size": 12
-            },
-            "title": {
-                "font": {
-                    "family": "Inter, system-ui, sans-serif",
-                    "size": 18,
-                    "color": ExecutivePalette.METALLIC_GOLD
-                },
-                "x": 0.02,
-                "xanchor": "left",
-                "pad": {"t": 20, "b": 20}
-            },
-            "xaxis": {
-                "gridcolor": "rgba(212, 175, 55, 0.1)",
-                "linecolor": "rgba(212, 175, 55, 0.2)",
-                "zerolinecolor": "rgba(212, 175, 55, 0.2)",
-                "tickfont": {"color": ExecutivePalette.NEUTRAL_TEXT, "size": 10},
-                "titlefont": {"color": ExecutivePalette.METALLIC_GOLD, "size": 12}
-            },
-            "yaxis": {
-                "gridcolor": "rgba(212, 175, 55, 0.1)",
-                "linecolor": "rgba(212, 175, 55, 0.2)",
-                "zerolinecolor": "rgba(212, 175, 55, 0.2)",
-                "tickfont": {"color": ExecutivePalette.NEUTRAL_TEXT, "size": 10},
-                "titlefont": {"color": ExecutivePalette.METALLIC_GOLD, "size": 12}
-            },
-            "legend": {
-                "bgcolor": "rgba(27, 29, 31, 0.9)",
-                "bordercolor": ExecutivePalette.METALLIC_GOLD,
-                "borderwidth": 1,
-                "font": {"color": ExecutivePalette.HIGH_CONTRAST, "size": 10}
-            },
-            "margin": {"l": 40, "r": 20, "t": 60, "b": 40}
-        }
-    }
-    
-    pio.templates["executive"] = go.layout.Template(layout=executive_theme["layout"])
-    pio.templates.default = "executive"
-
-# ============================================================================
-# PAGE CONFIGURATION
-# ============================================================================
-
-def configure_executive_page():
-    """Configure Streamlit for executive experience"""
-    st.set_page_config(
-        page_title=f"{ExecutiveConfig.APP_NAME} | Executive Dashboard",
-        page_icon="⚖️",
-        layout="wide",
-        initial_sidebar_state="expanded",
-        menu_items={
-            'Get Help': f'mailto:{ExecutiveConfig.SUPPORT_EMAIL}',
-            'Report a bug': f'mailto:{ExecutiveConfig.SUPPORT_EMAIL}',
-            'About': f"{ExecutiveConfig.APP_NAME} {ExecutiveConfig.VERSION}"
-        }
-    )
-
-def initialize_session_state():
-    """Initialize comprehensive session state"""
-    defaults = {
-        'authenticated': False,
-        'user': None,
-        'login_attempts': 0,
-        'session_start': None,
-        'current_page': 'dashboard',
-        'data_loaded': False,
-        'last_refresh': None,
-        'selected_client': None,
-        'date_range': (datetime.now() - timedelta(days=30), datetime.now()),
-        'theme': 'executive_dark',
-        'notifications': [],
-        'search_query': '',
-        'sidebar_collapsed': False
-    }
-    
-    for key, default_value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = default_value
-
-# ============================================================================
-# EXECUTIVE CSS SYSTEM - PINTEREST DESIGN REPLICA
-# ============================================================================
-
-def load_executive_css():
-    """Load comprehensive CSS matching Pinterest design with executive palette"""
-    
-    css_content = f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-    
-    :root {{
-        --bg-charcoal: {ExecutivePalette.CHARCOAL_BG};
-        --bg-dark-card: {ExecutivePalette.DARK_CARD};
-        --bg-light-card: {ExecutivePalette.LIGHT_CARD};
-        --accent-gold: {ExecutivePalette.METALLIC_GOLD};
-        --gold-highlight: {ExecutivePalette.GOLD_HIGHLIGHT};
-        --text-neutral: {ExecutivePalette.NEUTRAL_TEXT};
-        --text-contrast: {ExecutivePalette.HIGH_CONTRAST};
-        --error-subtle: {ExecutivePalette.ERROR_SUBTLE};
-        --success-subtle: {ExecutivePalette.SUCCESS_SUBTLE};
-        --warning: {ExecutivePalette.WARNING};
-        --info: {ExecutivePalette.INFO};
-    }}
-    
-    /* Global Reset */
-    .stApp {{
-        background: var(--bg-charcoal);
-        color: var(--text-neutral);
-        font-family: 'Inter', 'Helvetica Neue', -apple-system, system-ui, sans-serif;
-    }}
-    
-    /* Hide Streamlit Elements */
-    #MainMenu {{ visibility: hidden; }}
-    footer {{ visibility: hidden; }}
-    header {{ visibility: hidden; }}
-    .stDeployButton {{ visibility: hidden; }}
-    
-    /* ===== MAIN LAYOUT CONTAINER (Pinterest Style) ===== */
-    .main-container {{
-        display: flex;
-        min-height: 100vh;
-        background: var(--bg-charcoal);
-    }}
-    
-    /* ===== SIDEBAR DESIGN (Exact Pinterest Match) ===== */
-    .executive-sidebar {{
-        width: 280px;
-        background: var(--bg-dark-card);
-        padding: 2rem 0;
-        position: fixed;
-        height: 100vh;
-        left: 0;
-        top: 0;
-        z-index: 1000;
-        border-right: 1px solid rgba(212, 175, 55, 0.1);
-    }}
-    
-    .sidebar-logo {{
-        padding: 0 2rem 3rem 2rem;
-        text-align: center;
-    }}
-    
-    .sidebar-logo h1 {{
-        color: var(--text-contrast);
-        font-size: 1.5rem;
-        font-weight: 800;
-        margin: 0;
-        letter-spacing: 2px;
-    }}
-    
-    .sidebar-nav {{
-        padding: 0 1rem;
-    }}
-    
-    .nav-item {{
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1rem 1.5rem;
-        margin: 0.25rem 0;
-        border-radius: 12px;
-        color: var(--text-neutral);
-        text-decoration: none;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        font-size: 0.9rem;
-        font-weight: 500;
-    }}
-    
-    .nav-item:hover {{
-        background: rgba(212, 175, 55, 0.1);
-        color: var(--gold-highlight);
-        transform: translateX(4px);
-    }}
-    
-    .nav-item.active {{
-        background: linear-gradient(135deg, var(--accent-gold) 0%, var(--gold-highlight) 100%);
-        color: var(--bg-charcoal);
-        font-weight: 700;
-    }}
-    
-    .nav-icon {{
-        font-size: 1.2rem;
-        width: 20px;
-        text-align: center;
-    }}
-    
-    .sidebar-logout {{
-        position: absolute;
-        bottom: 2rem;
-        left: 1rem;
-        right: 1rem;
-    }}
-    
-    .logout-btn {{
-        width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1rem 1.5rem;
-        background: transparent;
-        border: 2px solid var(--accent-gold);
-        border-radius: 12px;
-        color: var(--accent-gold);
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-size: 0.8rem;
-    }}
-    
-    .logout-btn:hover {{
-        background: var(--accent-gold);
-        color: var(--bg-charcoal);
-    }}
-    
-    /* ===== MAIN CONTENT AREA ===== */
-    .main-content {{
-        margin-left: 280px;
-        padding: 2rem 3rem;
-        width: calc(100% - 280px);
-        min-height: 100vh;
-    }}
-    
-    /* ===== HEADER BAR (Pinterest Style) ===== */
-    .content-header {{
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 3rem;
-        padding: 1.5rem 2rem;
-        background: var(--bg-light-card);
-        border-radius: 20px;
-        border: 1px solid rgba(212, 175, 55, 0.1);
-    }}
-    
-    .search-container {{
-        position: relative;
-        flex: 1;
-        max-width: 400px;
-        margin-right: 2rem;
-    }}
-    
-    .search-input {{
-        width: 100%;
-        padding: 1rem 1rem 1rem 3rem;
-        background: var(--accent-gold);
-        border: none;
-        border-radius: 25px;
-        color: var(--bg-charcoal);
-        font-size: 0.9rem;
-        font-weight: 500;
-    }}
-    
-    .search-input::placeholder {{
-        color: rgba(15, 17, 19, 0.7);
-    }}
-    
-    .search-icon {{
-        position: absolute;
-        left: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--bg-charcoal);
-        font-size: 1.1rem;
-    }}
-    
-    .header-actions {{
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-    }}
-    
-    .header-icon {{
-        color: var(--text-neutral);
-        font-size: 1.2rem;
-        cursor: pointer;
-        transition: color 0.3s ease;
-    }}
-    
-    .header-icon:hover {{
-        color: var(--accent-gold);
-    }}
-    
-    .user-profile {{
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 0.75rem 1.5rem;
-        background: var(--accent-gold);
-        border-radius: 25px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }}
-    
-    .user-profile:hover {{
-        background: var(--gold-highlight);
-    }}
-    
-    .user-avatar {{
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: var(--bg-charcoal);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--accent-gold);
-        font-weight: 700;
-        font-size: 0.9rem;
-    }}
-    
-    .user-name {{
-        color: var(--bg-charcoal);
-        font-weight: 700;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }}
-    
-    /* ===== KPI CARDS (Pinterest Style) ===== */
-    .kpi-container {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 2rem;
-        margin-bottom: 3rem;
-    }}
-    
-    .kpi-card {{
-        background: var(--bg-light-card);
-        padding: 2rem;
-        border-radius: 20px;
-        border: 1px solid rgba(212, 175, 55, 0.1);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }}
-    
-    .kpi-card::before {{
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--accent-gold);
-    }}
-    
-    .kpi-card:hover {{
-        transform: translateY(-5px);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        border-color: rgba(212, 175, 55, 0.3);
-    }}
-    
-    .kpi-card.featured {{
-        background: linear-gradient(135deg, var(--accent-gold) 0%, var(--gold-highlight) 100%);
-        color: var(--bg-charcoal);
-    }}
-    
-    .kpi-card.featured .kpi-value,
-    .kpi-card.featured .kpi-label {{
-        color: var(--bg-charcoal);
-    }}
-    
-    .kpi-header {{
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 1rem;
-    }}
-    
-    .kpi-icon {{
-        width: 50px;
-        height: 50px;
-        background: rgba(212, 175, 55, 0.1);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--accent-gold);
-        font-size: 1.5rem;
-    }}
-    
-    .kpi-card.featured .kpi-icon {{
-        background: rgba(15, 17, 19, 0.1);
-        color: var(--bg-charcoal);
-    }}
-    
-    .kpi-menu {{
-        color: var(--text-neutral);
-        cursor: pointer;
-        font-size: 1.2rem;
-    }}
-    
-    .kpi-value {{
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: var(--text-contrast);
-        margin: 0.5rem 0;
-        line-height: 1;
-    }}
-    
-    .kpi-label {{
-        color: var(--text-neutral);
-        font-size: 0.9rem;
-        margin-bottom: 1rem;
-        text-transform: capitalize;
-    }}
-    
-    .kpi-change {{
-        font-size: 0.8rem;
-        font-weight: 600;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        display: inline-block;
-    }}
-    
-    .kpi-change.positive {{
-        background: rgba(61, 188, 107, 0.2);
-        color: var(--success-subtle);
-    }}
-    
-    .kpi-change.negative {{
-        background: rgba(228, 87, 76, 0.2);
-        color: var(--error-subtle);
-    }}
-    
-    /* ===== MAIN CHART AREA (Pinterest Style) ===== */
-    .chart-main {{
-        background: var(--bg-light-card);
-        border-radius: 20px;
-        padding: 2rem;
-        margin-bottom: 3rem;
-        border: 1px solid rgba(212, 175, 55, 0.1);
-    }}
-    
-    .chart-header {{
-        margin-bottom: 2rem;
-    }}
-    
-    .chart-title {{
-        color: var(--text-contrast);
-        font-size: 1.2rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }}
-    
-    .chart-subtitle {{
-        color: var(--text-neutral);
-        font-size: 0.9rem;
-    }}
-    
-    /* ===== RIGHT SIDEBAR CONTENT ===== */
-    .content-grid {{
-        display: grid;
-        grid-template-columns: 1fr 350px;
-        gap: 3rem;
-        margin-bottom: 2rem;
-    }}
-    
-    .right-sidebar {{
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-    }}
-    
-    .widget-card {{
-        background: var(--bg-light-card);
-        border-radius: 20px;
-        padding: 2rem;
-        border: 1px solid rgba(212, 175, 55, 0.1);
-    }}
-    
-    .widget-title {{
-        color: var(--text-contrast);
-        font-size: 1.1rem;
-        font-weight: 700;
-        margin-bottom: 1.5rem;
-    }}
-    
-    /* ===== DONUT CHART WIDGET ===== */
-    .donut-container {{
-        text-align: center;
-        position: relative;
-    }}
-    
-    .donut-center {{
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 10;
-    }}
-    
-    .donut-value {{
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--text-contrast);
-        line-height: 1;
-    }}
-    
-    .donut-label {{
-        font-size: 0.8rem;
-        color: var(--text-neutral);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }}
-    
-    .donut-legend {{
-        display: flex;
-        justify-content: center;
-        gap: 1.5rem;
-        margin-top: 1.5rem;
-    }}
-    
-    .legend-item {{
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.8rem;
-    }}
-    
-    .legend-dot {{
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-    }}
-    
-    /* ===== TRAFFIC SOURCE WIDGET ===== */
-    .traffic-list {{
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }}
-    
-    .traffic-item {{
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }}
-    
-    .traffic-source {{
-        color: var(--text-contrast);
-        font-size: 0.9rem;
-        font-weight: 500;
-    }}
-    
-    .traffic-bar {{
-        flex: 1;
-        height: 6px;
-        background: rgba(212, 175, 55, 0.1);
-        border-radius: 3px;
-        margin: 0 1rem;
-        position: relative;
-        overflow: hidden;
-    }}
-    
-    .traffic-fill {{
-        height: 100%;
-        background: var(--accent-gold);
-        border-radius: 3px;
-        transition: width 1s ease;
-    }}
-    
-    .traffic-percent {{
-        color: var(--text-neutral);
-        font-size: 0.8rem;
-        font-weight: 600;
-        min-width: 35px;
-        text-align: right;
-    }}
-    
-    /* ===== CALENDAR WIDGET ===== */
-    .calendar-container {{
-        background: var(--bg-light-card);
-        border-radius: 20px;
-        padding: 2rem;
-        border: 1px solid rgba(212, 175, 55, 0.1);
-    }}
-    
-    .calendar-header {{
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }}
-    
-    .calendar-month {{
-        color: var(--text-contrast);
-        font-size: 1.1rem;
-        font-weight: 700;
-    }}
-    
-    .calendar-nav {{
-        display: flex;
-        gap: 1rem;
-    }}
-    
-    .calendar-nav-btn {{
-        background: none;
-        border: none;
-        color: var(--text-neutral);
-        font-size: 1.2rem;
-        cursor: pointer;
-        padding: 0.5rem;
-        border-radius: 50%;
-        transition: all 0.3s ease;
-    }}
-    
-    .calendar-nav-btn:hover {{
-        background: rgba(212, 175, 55, 0.1);
-        color: var(--accent-gold);
-    }}
-    
-    .calendar-grid {{
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 0.5rem;
-    }}
-    
-    .calendar-day {{
-        aspect-ratio: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.9rem;
-        color: var(--text-neutral);
-        cursor: pointer;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-        font-weight: 500;
-    }}
-    
-    .calendar-day:hover {{
-        background: rgba(212, 175, 55, 0.1);
-        color: var(--accent-gold);
-    }}
-    
-    .calendar-day.today {{
-        background: var(--accent-gold);
-        color: var(--bg-charcoal);
-        font-weight: 700;
-    }}
-    
-    .calendar-day.other-month {{
-        opacity: 0.3;
-    }}
-    
-    /* ===== RESPONSIVE DESIGN ===== */
-    @media (max-width: 1400px) {{
-        .content-grid {{
-            grid-template-columns: 1fr 300px;
-        }}
-        
-        .right-sidebar {{
-            gap: 1.5rem;
-        }}
-    }}
-    
-    @media (max-width: 1200px) {{
-        .executive-sidebar {{
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-        }}
-        
-        .executive-sidebar.open {{
-            transform: translateX(0);
-        }}
-        
-        .main-content {{
-            margin-left: 0;
-            width: 100%;
-            padding: 1.5rem;
-        }}
-        
-        .content-grid {{
-            grid-template-columns: 1fr;
-        }}
-        
-        .kpi-container {{
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-        }}
-    }}
-    
-    @media (max-width: 768px) {{
-        .main-content {{
-            padding: 1rem;
-        }}
-        
-        .content-header {{
-            flex-direction: column;
-            gap: 1rem;
-        }}
-        
-        .search-container {{
-            max-width: 100%;
-            margin-right: 0;
-        }}
-        
-        .kpi-container {{
-            grid-template-columns: 1fr;
-        }}
-        
-        .user-profile {{
-            padding: 0.5rem 1rem;
-        }}
-        
-        .user-name {{
-            display: none;
-        }}
-    }}
-    
-    /* ===== ANIMATIONS ===== */
-    @keyframes slideIn {{
-        from {{
-            opacity: 0;
-            transform: translateY(20px);
-        }}
-        to {{
-            opacity: 1;
-            transform: translateY(0);
-        }}
-    }}
-    
-    @keyframes fadeIn {{
-        from {{
-            opacity: 0;
-        }}
-        to {{
-            opacity: 1;
-        }}
-    }}
-    
-    .animate-slide-in {{
-        animation: slideIn 0.6s ease-out;
-    }}
-    
-    .animate-fade-in {{
-        animation: fadeIn 0.4s ease-out;
-    }}
-    
-    /* ===== UTILITY CLASSES ===== */
-    .text-gold {{ color: var(--accent-gold); }}
-    .text-contrast {{ color: var(--text-contrast); }}
-    .text-neutral {{ color: var(--text-neutral); }}
-    .text-success {{ color: var(--success-subtle); }}
-    .text-error {{ color: var(--error-subtle); }}
-    
-    .bg-dark {{ background: var(--bg-dark-card); }}
-    .bg-light {{ background: var(--bg-light-card); }}
-    
-    .rounded {{ border-radius: 12px; }}
-    .rounded-lg {{ border-radius: 20px; }}
-    .rounded-full {{ border-radius: 50px; }}
-    
-    .shadow {{ box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); }}
-    .shadow-lg {{ box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }}
-    
-    .transition {{ transition: all 0.3s ease; }}
-    .cursor-pointer {{ cursor: pointer; }}
-    
-    .flex {{ display: flex; }}
-    .items-center {{ align-items: center; }}
-    .justify-between {{ justify-content: space-between; }}
-    .justify-center {{ justify-content: center; }}
-    .gap-4 {{ gap: 1rem; }}
-    .gap-8 {{ gap: 2rem; }}
-    
-    .hidden {{ display: none; }}
-    .block {{ display: block; }}
-    
-    .w-full {{ width: 100%; }}
-    .h-full {{ height: 100%; }}
-    </style>
-    """
-    
-    st.markdown(css_content, unsafe_allow_html=True)
-
-def load_external_css():
-    """Load external CSS file from assets folder for additional styling"""
+# Generate sample data with proper error handling
+def generate_sample_data():
     try:
-        css_file_path = Path("assets/styles.css")
-        if css_file_path.exists():
-            with open(css_file_path, 'r', encoding='utf-8') as f:
-                st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-        else:
-            # Silently skip if file doesn't exist - not critical for functionality
-            logging.info("External CSS file not found: assets/styles.css")
-    except Exception as e:
-        logging.warning(f"Could not load external CSS: {e}")
-        # Continue without external CSS - app has inline styles as fallback
-
-# ============================================================================
-# AUTHENTICATION SYSTEM
-# ============================================================================
-
-class AuthenticationManager:
-    """Executive authentication system"""
-    
-    def __init__(self):
-        self.users_db = self._initialize_users()
-    
-    def _initialize_users(self) -> Dict[str, Dict]:
-        """Initialize user database"""
+        # Set random seed for consistent data
+        np.random.seed(42)
+        
+        # 1. Financial Impact data
+        financial_data = pd.DataFrame({
+            'Category': ['Revenue', 'Operating Costs', 'Net Profit', 'Investments', 'Returns'],
+            'Current': [2850000, -1320000, 1530000, -480000, 720000],
+            'Previous': [2600000, -1450000, 1150000, -520000, 580000]
+        })
+        
+        # 2. Deadline Tracker data
+        deadline_data = pd.DataFrame({
+            'Task': ['Q4 Financial Report', 'System Infrastructure Upgrade', 'Compliance Audit Review', 'Annual Budget Planning', 'Security Assessment'],
+            'Days_Left': [3, 15, 1, 12, 8],
+            'Progress': [85, 45, 95, 60, 70]
+        })
+        # Add urgency status based on days left
+        deadline_data['Urgency'] = deadline_data['Days_Left'].apply(
+            lambda x: 'Critical' if x <= 3 else 'Warning' if x <= 7 else 'Normal'
+        )
+        
+        # 3. Alert Severity data
+        alert_data = pd.DataFrame({
+            'Severity': ['Critical', 'Warning', 'Info'],
+            'Count': [8, 24, 42]
+        })
+        
+        # 4. Historical Trends data (last 12 months)
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=365)
+        date_range = pd.date_range(start=start_date, end=end_date, freq='D')
+        
+        # Generate realistic trending data
+        base_value = 1000
+        trend = np.linspace(0, 200, len(date_range))
+        noise = np.random.normal(0, 50, len(date_range))
+        seasonal = 100 * np.sin(2 * np.pi * np.arange(len(date_range)) / 365)
+        
+        historical_data = pd.DataFrame({
+            'Date': date_range,
+            'Performance': base_value + trend + seasonal + noise,
+            'Target': 1200
+        })
+        
+        # 5. Growth vs Decline data
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
+        growth_data = pd.DataFrame({
+            'Month': months,
+            'Growth_Rate': [12, 18, 15, 22, 28, 25, 30, 35],
+            'Decline_Rate': [5, 8, 4, 6, 9, 7, 8, 6]
+        })
+        
+        # 6. Performance KPIs data
+        kpis = ['Operational Efficiency', 'Quality Score', 'Response Time', 'Cost Optimization', 'Customer Satisfaction']
+        performance_data = pd.DataFrame({
+            'KPI': kpis,
+            'Current_Score': [85, 92, 78, 88, 91],
+            'Target_Score': [90, 95, 85, 90, 95],
+            'Industry_Avg': [75, 85, 80, 82, 87]
+        })
+        
+        # 7. Risk score (single value for gauge)
+        risk_score = 68  # Out of 100 (lower is better)
+        
+        # 8. Projection & Forecast data
+        future_months = pd.date_range(start=datetime.now(), periods=12, freq='M')
+        base_forecast = 1500
+        growth_rate = 0.05
+        
+        forecast_values = []
+        for i, month in enumerate(future_months):
+            base = base_forecast * (1 + growth_rate) ** i
+            forecast_values.append(base)
+        
+        projection_data = pd.DataFrame({
+            'Month': future_months,
+            'Forecast': forecast_values,
+            'Lower_Confidence': [f * 0.85 for f in forecast_values],
+            'Upper_Confidence': [f * 1.15 for f in forecast_values]
+        })
+        
         return {
-            "executive": {
-                "password_hash": self._hash_password("Executive2024!"),
-                "user_data": User(
-                    username="executive",
-                    email="executive@lexcura.com",
-                    role=UserRole.EXECUTIVE,
-                    full_name="Robert William"  # Matching Pinterest design
-                )
-            },
-            "director": {
-                "password_hash": self._hash_password("Director2024!"),
-                "user_data": User(
-                    username="director",
-                    email="director@lexcura.com", 
-                    role=UserRole.DIRECTOR,
-                    full_name="Sarah Director"
-                )
-            },
-            "demo": {
-                "password_hash": self._hash_password("Demo2024!"),
-                "user_data": User(
-                    username="demo",
-                    email="demo@lexcura.com",
-                    role=UserRole.VIEWER,
-                    full_name="Demo User"
-                )
-            }
+            'financial': financial_data,
+            'deadlines': deadline_data,
+            'alerts': alert_data,
+            'historical': historical_data,
+            'growth': growth_data,
+            'performance': performance_data,
+            'risk_score': risk_score,
+            'projections': projection_data
         }
-    
-    def _hash_password(self, password: str) -> str:
-        """Secure password hashing"""
-        salt = "lexcura_executive_2024"
-        return hashlib.sha256((password + salt).encode()).hexdigest()
-    
-    def _verify_password(self, password: str, password_hash: str) -> bool:
-        """Verify password"""
-        return self._hash_password(password) == password_hash
-    
-    def authenticate_user(self, username: str, password: str) -> Tuple[bool, Optional[User], str]:
-        """Authenticate user"""
-        try:
-            if username not in self.users_db:
-                return False, None, "Invalid credentials"
-            
-            user_record = self.users_db[username]
-            if not self._verify_password(password, user_record["password_hash"]):
-                st.session_state.login_attempts += 1
-                attempts_left = ExecutiveConfig.MAX_LOGIN_ATTEMPTS - st.session_state.login_attempts
-                if attempts_left <= 0:
-                    return False, None, "Account locked"
-                return False, None, f"Invalid credentials ({attempts_left} attempts left)"
-            
-            user = user_record["user_data"]
-            user.last_login = datetime.now()
-            user.login_count += 1
-            
-            st.session_state.login_attempts = 0
-            return True, user, "Success"
-            
-        except Exception as e:
-            return False, None, "System error"
-    
-    def logout_user(self):
-        """Logout user"""
-        for key in ['authenticated', 'user', 'session_start']:
-            if key in st.session_state:
-                del st.session_state[key]
-        st.session_state.authenticated = False
-        st.rerun()
+        
+    except Exception as e:
+        print(f"Error generating sample data: {str(e)}")
+        # Return minimal fallback data
+        return {
+            'financial': pd.DataFrame({'Category': ['Revenue'], 'Current': [1000000], 'Previous': [900000]}),
+            'deadlines': pd.DataFrame({'Task': ['Sample Task'], 'Days_Left': [5], 'Progress': [50], 'Urgency': ['Normal']}),
+            'alerts': pd.DataFrame({'Severity': ['Info'], 'Count': [10]}),
+            'historical': pd.DataFrame({'Date': [datetime.now()], 'Performance': [1000], 'Target': [1200]}),
+            'growth': pd.DataFrame({'Month': ['Jan'], 'Growth_Rate': [15], 'Decline_Rate': [5]}),
+            'performance': pd.DataFrame({'KPI': ['Performance'], 'Current_Score': [80], 'Target_Score': [90], 'Industry_Avg': [75]}),
+            'risk_score': 70,
+            'projections': pd.DataFrame({'Month': [datetime.now()], 'Forecast': [1500], 'Lower_Confidence': [1400], 'Upper_Confidence': [1600]})
+        }
 
-# ============================================================================
-# DATA MANAGEMENT
-# ============================================================================
+# Initialize data
+data = generate_sample_data()
 
-@st.cache_data(ttl=ExecutiveConfig.CACHE_TTL, show_spinner=False)
-def load_executive_data() -> Dict[str, Any]:
-    """Load comprehensive dashboard data"""
-    
-    # Generate sample time series data for charts
-    dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='D')
-    np.random.seed(42)
-    
-    # Main area chart data (Pinterest style)
-    area_data = []
-    base_value = 15000
-    for i, date in enumerate(dates):
-        # Simulate realistic business data with trends and seasonality
-        trend = i * 20
-        seasonal = 5000 * np.sin(2 * np.pi * i / 365.25) 
-        noise = np.random.normal(0, 1000)
-        value = base_value + trend + seasonal + noise
-        area_data.append({'date': date, 'value': max(0, value)})
-    
-    area_df = pd.DataFrame(area_data)
-    
-    # Generate monthly data for simplified view
-    monthly_data = area_df.groupby(area_df['date'].dt.to_period('M')).agg({
-        'value': 'mean'
-    }).round(0)
-    
+# Common chart layout template
+def get_base_layout(title):
     return {
-        # KPI Data (matching Pinterest cards)
-        'kpi_data': {
-            'revenue': {'value': 36159, 'change': '+2.5%', 'trend': 'positive'},
-            'users': {'value': 3359, 'change': '+12.3%', 'trend': 'positive'}, 
-            'orders': {'value': 36159, 'change': '-1.2%', 'trend': 'negative'},
-            'conversion': {'value': 2.45, 'change': '+0.3%', 'trend': 'positive'}
+        'title': {
+            'text': title,
+            'font': {'color': COLORS['neutral_text'], 'size': 18, 'family': 'Inter'},
+            'x': 0.5,
+            'xanchor': 'center'
         },
-        
-        # Chart data
-        'area_chart_data': area_df,
-        'monthly_data': monthly_data,
-        
-        # Donut chart data (Top Product Sale)
-        'product_sales': {
-            'total': 95000,
-            'segments': [
-                {'name': 'Vector', 'value': 35, 'color': ExecutivePalette.METALLIC_GOLD},
-                {'name': 'Template', 'value': 40, 'color': ExecutivePalette.NEUTRAL_TEXT},
-                {'name': 'Presentation', 'value': 25, 'color': ExecutivePalette.LIGHT_CARD}
-            ]
+        'paper_bgcolor': COLORS['charcoal'],
+        'plot_bgcolor': COLORS['dark_grey'],
+        'font': {'color': COLORS['neutral_text'], 'family': 'Inter'},
+        'margin': {'l': 60, 'r': 60, 't': 80, 'b': 60},
+        'showlegend': True,
+        'legend': {
+            'font': {'color': COLORS['neutral_text']},
+            'bgcolor': 'rgba(0,0,0,0)',
+            'bordercolor': COLORS['neutral_text'],
+            'borderwidth': 1
         },
-        
-        # Traffic source data
-        'traffic_sources': [
-            {'source': 'example.com', 'percentage': 65},
-            {'source': 'example2.com', 'percentage': 45}, 
-            {'source': 'example3.com', 'percentage': 30}
-        ],
-        
-        # Calendar data
-        'calendar': {
-            'current_month': datetime.now().strftime('%B %Y'),
-            'today': datetime.now().day
-        },
-        
-        # Meta data
-        'last_updated': datetime.now(),
-        'user_count': 1247,
-        'active_sessions': 89
+        'xaxis': {'color': COLORS['neutral_text'], 'gridcolor': '#2A2D30'},
+        'yaxis': {'color': COLORS['neutral_text'], 'gridcolor': '#2A2D30'}
     }
 
-# ============================================================================
-# CHART CREATION FUNCTIONS
-# ============================================================================
+# Chart 1: Financial Impact Bar Chart
+def create_financial_chart():
+    try:
+        fig = go.Figure()
+        
+        # Current period bars
+        fig.add_trace(go.Bar(
+            x=data['financial']['Category'],
+            y=data['financial']['Current'],
+            name='Current Period',
+            marker_color=[COLORS['success_green'] if x > 0 else COLORS['danger_red'] 
+                         for x in data['financial']['Current']],
+            hovertemplate='<b>%{x}</b><br>Current: $%{y:,.0f}<br><extra></extra>',
+            text=[f"${x:,.0f}" for x in data['financial']['Current']],
+            textposition='outside'
+        ))
+        
+        # Previous period bars
+        fig.add_trace(go.Bar(
+            x=data['financial']['Category'],
+            y=data['financial']['Previous'],
+            name='Previous Period',
+            marker_color=COLORS['gold_primary'],
+            opacity=0.7,
+            hovertemplate='<b>%{x}</b><br>Previous: $%{y:,.0f}<br><extra></extra>'
+        ))
+        
+        layout = get_base_layout('Financial Impact Analysis')
+        layout['yaxis']['tickformat'] = '$,.0f'
+        layout['barmode'] = 'group'
+        
+        fig.update_layout(layout)
+        return fig
+    except Exception as e:
+        print(f"Error creating financial chart: {str(e)}")
+        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
 
-def create_area_chart(data_df: pd.DataFrame) -> go.Figure:
-    """Create main area chart matching Pinterest design"""
-    
-    # Sample data for the last 12 months
-    recent_data = data_df.tail(365)
-    
-    fig = go.Figure()
-    
-    # Create smooth area chart
-    fig.add_trace(go.Scatter(
-        x=recent_data['date'],
-        y=recent_data['value'],
-        mode='lines',
-        fill='tonexty',
-        fillcolor='rgba(212, 175, 55, 0.3)',
-        line=dict(
-            color=ExecutivePalette.METALLIC_GOLD,
-            width=3,
-            shape='spline',
-            smoothing=0.3
-        ),
-        name='Performance',
-        hovertemplate='<b>%{y:,.0f}</b><br>%{x}<extra></extra>'
-    ))
-    
-    # Add baseline
-    fig.add_hline(
-        y=recent_data['value'].min(),
-        line_dash="dot",
-        line_color=ExecutivePalette.NEUTRAL_TEXT,
-        opacity=0.5
-    )
-    
-    fig.update_layout(
-        title='',
-        showlegend=False,
-        height=300,
-        margin=dict(l=0, r=0, t=0, b=0),
-        xaxis=dict(
-            showgrid=True,
-            gridcolor='rgba(212, 175, 55, 0.1)',
-            showticklabels=True,
-            tickformat='%b',
-            tickangle=0
-        ),
-        yaxis=dict(
-            showgrid=True, 
-            gridcolor='rgba(212, 175, 55, 0.1)',
-            showticklabels=True,
-            tickformat=',.0f'
-        ),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        hovermode='x unified'
-    )
-    
-    return fig
+# Chart 2: Deadline Tracker Horizontal Timeline
+def create_deadline_chart():
+    try:
+        urgency_colors = {
+            'Critical': COLORS['danger_red'],
+            'Warning': COLORS['warning_orange'], 
+            'Normal': COLORS['success_green']
+        }
+        
+        fig = go.Figure()
+        
+        fig.add_trace(go.Bar(
+            x=data['deadlines']['Days_Left'],
+            y=data['deadlines']['Task'],
+            orientation='h',
+            marker_color=[urgency_colors[urgency] for urgency in data['deadlines']['Urgency']],
+            hovertemplate='<b>%{y}</b><br>Days Remaining: %{x}<br>Progress: %{customdata}%<br><extra></extra>',
+            customdata=data['deadlines']['Progress'],
+            text=[f"{days}d" for days in data['deadlines']['Days_Left']],
+            textposition='middle right'
+        ))
+        
+        layout = get_base_layout('Project Deadline Tracker')
+        layout['xaxis']['title'] = 'Days Remaining'
+        layout['height'] = 400
+        
+        fig.update_layout(layout)
+        return fig
+    except Exception as e:
+        print(f"Error creating deadline chart: {str(e)}")
+        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
 
-def create_donut_chart(product_data: Dict) -> go.Figure:
-    """Create donut chart for product sales"""
-    
-    segments = product_data['segments']
-    
-    fig = go.Figure(data=[
-        go.Pie(
-            labels=[seg['name'] for seg in segments],
-            values=[seg['value'] for seg in segments],
+# Chart 3: Alert Severity Donut Chart
+def create_alert_chart():
+    try:
+        severity_colors = [COLORS['danger_red'], COLORS['warning_orange'], COLORS['success_green']]
+        
+        fig = go.Figure(go.Pie(
+            labels=data['alerts']['Severity'],
+            values=data['alerts']['Count'],
             hole=0.6,
-            marker=dict(
-                colors=[seg['color'] for seg in segments],
-                line=dict(color=ExecutivePalette.CHARCOAL_BG, width=3)
-            ),
-            textinfo='none',
-            hovertemplate='<b>%{label}</b><br>%{percent}<extra></extra>'
+            marker_colors=severity_colors,
+            hovertemplate='<b>%{label} Alerts</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>',
+            textinfo='label+percent',
+            textfont={'color': 'white', 'size': 12}
+        ))
+        
+        # Add center annotation
+        total_alerts = data['alerts']['Count'].sum()
+        fig.add_annotation(
+            text=f"Total<br><b>{total_alerts}</b><br>Alerts",
+            x=0.5, y=0.5,
+            font={'size': 16, 'color': COLORS['neutral_text']},
+            showarrow=False
         )
-    ])
-    
-    fig.update_layout(
-        showlegend=False,
-        height=200,
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)'
-    )
-    
-    return fig
+        
+        layout = get_base_layout('Alert Severity Distribution')
+        layout['showlegend'] = False
+        
+        fig.update_layout(layout)
+        return fig
+    except Exception as e:
+        print(f"Error creating alert chart: {str(e)}")
+        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
 
-def create_sparkline(values: List[float], color: str = None) -> go.Figure:
-    """Create small sparkline charts for KPI cards"""
-    
-    if color is None:
-        color = ExecutivePalette.METALLIC_GOLD
-    
-    fig = go.Figure()
-    
-    fig.add_trace(go.Scatter(
-        y=values,
-        mode='lines',
-        line=dict(color=color, width=2),
-        fill='tonexty',
-        fillcolor=f'rgba({",".join(str(int(color[i:i+2], 16)) for i in (1, 3, 5))}, 0.3)',
-        showlegend=False,
-        hoverinfo='skip'
-    ))
-    
-    fig.update_layout(
-        height=60,
-        margin=dict(l=0, r=0, t=0, b=0),
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
-    )
-    
-    return fig
+# Chart 4: Historical Trends Area Chart
+def create_historical_chart():
+    try:
+        fig = go.Figure()
+        
+        # Performance area chart
+        fig.add_trace(go.Scatter(
+            x=data['historical']['Date'],
+            y=data['historical']['Performance'],
+            mode='lines',
+            line={'color': COLORS['gold_primary'], 'width': 3},
+            fill='tonexty',
+            fillcolor=f"rgba(212, 175, 55, 0.3)",
+            name='Performance Metric',
+            hovertemplate='<b>%{x|%Y-%m-%d}</b><br>Performance: %{y:,.1f}<extra></extra>'
+        ))
+        
+        # Target line
+        fig.add_hline(
+            y=data['historical']['Target'].iloc[0],
+            line_dash="dash",
+            line_color=COLORS['success_green'],
+            line_width=2,
+            annotation_text="Performance Target",
+            annotation_position="top right"
+        )
+        
+        layout = get_base_layout('Historical Performance Trends')
+        layout['xaxis']['title'] = 'Date'
+        layout['yaxis']['title'] = 'Performance Score'
+        
+        fig.update_layout(layout)
+        return fig
+    except Exception as e:
+        print(f"Error creating historical chart: {str(e)}")
+        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
 
-# ============================================================================
-# UI COMPONENTS
-# ============================================================================
+# Chart 5: Growth vs Decline Stacked Analysis
+def create_growth_chart():
+    try:
+        fig = go.Figure()
+        
+        # Growth bars
+        fig.add_trace(go.Bar(
+            x=data['growth']['Month'],
+            y=data['growth']['Growth_Rate'],
+            name='Growth Rate',
+            marker_color=COLORS['success_green'],
+            hovertemplate='<b>%{x}</b><br>Growth: +%{y}%<extra></extra>',
+            text=[f"+{rate}%" for rate in data['growth']['Growth_Rate']],
+            textposition='outside'
+        ))
+        
+        # Decline bars (negative values)
+        fig.add_trace(go.Bar(
+            x=data['growth']['Month'],
+            y=[-rate for rate in data['growth']['Decline_Rate']],
+            name='Decline Rate',
+            marker_color=COLORS['danger_red'],
+            hovertemplate='<b>%{x}</b><br>Decline: %{y}%<extra></extra>',
+            text=[f"-{rate}%" for rate in data['growth']['Decline_Rate']],
+            textposition='outside'
+        ))
+        
+        layout = get_base_layout('Growth vs Decline Analysis')
+        layout['yaxis']['title'] = 'Rate (%)'
+        layout['yaxis']['ticksuffix'] = '%'
+        layout['xaxis']['title'] = 'Month'
+        
+        fig.update_layout(layout)
+        return fig
+    except Exception as e:
+        print(f"Error creating growth chart: {str(e)}")
+        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
 
-def render_login_page():
-    """Render executive login matching design aesthetic"""
-    
-    st.markdown("""
-    <div style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: var(--bg-charcoal);">
-        <div style="background: var(--bg-light-card); padding: 3rem; border-radius: 20px; border: 1px solid rgba(212, 175, 55, 0.1); width: 400px; text-align: center;">
-            <h1 style="color: var(--text-contrast); margin-bottom: 0.5rem; font-size: 2rem; font-weight: 800;">LOGO</h1>
-            <p style="color: var(--text-neutral); margin-bottom: 2rem;">Executive Legal Intelligence</p>
-    """, unsafe_allow_html=True)
-    
-    with st.form("login_form"):
-        st.text_input("Username", placeholder="Enter username")
-        st.text_input("Password", type="password", placeholder="Enter password")
+# Chart 6: Performance Comparison Radar Chart
+def create_performance_chart():
+    try:
+        fig = go.Figure()
         
-        col1, col2 = st.columns(2)
-        with col1:
-            st.checkbox("Remember me")
+        # Current performance
+        fig.add_trace(go.Scatterpolar(
+            r=data['performance']['Current_Score'],
+            theta=data['performance']['KPI'],
+            fill='toself',
+            name='Current Performance',
+            line_color=COLORS['gold_primary'],
+            fillcolor=f"rgba(212, 175, 55, 0.4)",
+            hovertemplate='<b>%{theta}</b><br>Current: %{r}%<extra></extra>'
+        ))
         
-        submitted = st.form_submit_button("LOGIN", use_container_width=True)
+        # Target performance
+        fig.add_trace(go.Scatterpolar(
+            r=data['performance']['Target_Score'],
+            theta=data['performance']['KPI'],
+            fill='toself',
+            name='Target',
+            line_color=COLORS['success_green'],
+            fillcolor=f"rgba(61, 188, 107, 0.2)",
+            hovertemplate='<b>%{theta}</b><br>Target: %{r}%<extra></extra>'
+        ))
         
-        if submitted:
-            # For demo, always authenticate as Robert William
-            st.session_state.authenticated = True
-            st.session_state.user = User(
-                username="executive",
-                email="executive@lexcura.com", 
-                role=UserRole.EXECUTIVE,
-                full_name="ROBERT WILLIAM"
-            )
-            st.session_state.session_start = datetime.now()
-            st.rerun()
-    
-    # Demo credentials
-    with st.expander("Demo Credentials"):
-        st.write("Username: `demo` | Password: `demo`")
-        st.write("Username: `executive` | Password: `Executive2024!`")
-    
-    st.markdown("</div></div>", unsafe_allow_html=True)
+        # Industry average
+        fig.add_trace(go.Scatterpolar(
+            r=data['performance']['Industry_Avg'],
+            theta=data['performance']['KPI'],
+            mode='lines',
+            name='Industry Average',
+            line_color=COLORS['neutral_text'],
+            line_dash='dot',
+            hovertemplate='<b>%{theta}</b><br>Industry Avg: %{r}%<extra></extra>'
+        ))
+        
+        layout = get_base_layout('Performance vs Target KPIs')
+        layout['polar'] = {
+            'radialaxis': {
+                'visible': True,
+                'range': [0, 100],
+                'color': COLORS['neutral_text'],
+                'ticksuffix': '%'
+            },
+            'angularaxis': {'color': COLORS['neutral_text']}
+        }
+        
+        fig.update_layout(layout)
+        return fig
+    except Exception as e:
+        print(f"Error creating performance chart: {str(e)}")
+        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
 
-def render_sidebar():
-    """Render left sidebar navigation matching Pinterest design"""
-    
-    sidebar_html = f"""
-    <div class="executive-sidebar">
-        <div class="sidebar-logo">
-            <h1>LOGO</h1>
-        </div>
+# Chart 7: Risk & Compliance Gauge
+def create_risk_gauge():
+    try:
+        # Determine gauge color based on risk score
+        if data['risk_score'] <= 30:
+            gauge_color = COLORS['success_green']
+        elif data['risk_score'] <= 70:
+            gauge_color = COLORS['warning_orange']
+        else:
+            gauge_color = COLORS['danger_red']
         
-        <nav class="sidebar-nav">
-            <div class="nav-item active" onclick="setActivePage('dashboard')">
-                <span class="nav-icon">📊</span>
-                <span>Dashboard</span>
-            </div>
-            <div class="nav-item" onclick="setActivePage('profile')">
-                <span class="nav-icon">👤</span>
-                <span>Profile</span>
-            </div>
-            <div class="nav-item" onclick="setActivePage('folders')">
-                <span class="nav-icon">📁</span>
-                <span>Folders</span>
-            </div>
-            <div class="nav-item" onclick="setActivePage('notification')">
-                <span class="nav-icon">🔔</span>
-                <span>Notification</span>
-            </div>
-            <div class="nav-item" onclick="setActivePage('messages')">
-                <span class="nav-icon">💬</span>
-                <span>Messages</span>
-            </div>
-            <div class="nav-item" onclick="setActivePage('help')">
-                <span class="nav-icon">❓</span>
-                <span>Help Center</span>
-            </div>
-            <div class="nav-item" onclick="setActivePage('settings')">
-                <span class="nav-icon">⚙️</span>
-                <span>Setting</span>
-            </div>
-        </nav>
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number+delta",
+            value=data['risk_score'],
+            domain={'x': [0, 1], 'y': [0, 1]},
+            title={'text': "Risk & Compliance Score", 'font': {'color': COLORS['neutral_text'], 'size': 16}},
+            delta={
+                'reference': 50,
+                'increasing': {'color': COLORS['danger_red']},
+                'decreasing': {'color': COLORS['success_green']}
+            },
+            gauge={
+                'axis': {
+                    'range': [None, 100],
+                    'tickcolor': COLORS['neutral_text'],
+                    'tickfont': {'color': COLORS['neutral_text']}
+                },
+                'bar': {'color': gauge_color, 'thickness': 0.3},
+                'steps': [
+                    {'range': [0, 30], 'color': 'rgba(61, 188, 107, 0.3)'},
+                    {'range': [30, 70], 'color': 'rgba(244, 162, 97, 0.3)'},
+                    {'range': [70, 100], 'color': 'rgba(228, 87, 76, 0.3)'}
+                ],
+                'threshold': {
+                    'line': {'color': COLORS['neutral_text'], 'width': 4},
+                    'thickness': 0.75,
+                    'value': 80
+                }
+            },
+            number={'font': {'color': COLORS['neutral_text'], 'size': 24}}
+        ))
         
-        <div class="sidebar-logout">
-            <button class="logout-btn" onclick="logout()">
-                <span class="nav-icon">🚪</span>
-                <span>LOGOUT</span>
-            </button>
-        </div>
-    </div>
-    
-    <script>
-    function setActivePage(page) {{
-        // Remove active class from all nav items
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-        // Add active class to clicked item
-        event.target.closest('.nav-item').classList.add('active');
-    }}
-    
-    function logout() {{
-        if(confirm('Are you sure you want to logout?')) {{
-            // This would trigger a Streamlit rerun in the actual app
-            window.parent.postMessage({{'type': 'logout'}}, '*');
-        }}
-    }}
-    </script>
-    """
-    
-    st.markdown(sidebar_html, unsafe_allow_html=True)
+        fig.update_layout(
+            paper_bgcolor=COLORS['charcoal'],
+            plot_bgcolor=COLORS['charcoal'],
+            font={'color': COLORS['neutral_text'], 'family': 'Inter'},
+            margin={'l': 40, 'r': 40, 't': 60, 'b': 40},
+            height=400
+        )
+        
+        return fig
+    except Exception as e:
+        print(f"Error creating risk gauge: {str(e)}")
+        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
 
-def render_header(user: User):
-    """Render top header bar matching Pinterest design"""
-    
-    header_html = f"""
-    <div class="content-header">
-        <div class="search-container">
-            <span class="search-icon">🔍</span>
-            <input type="text" class="search-input" placeholder="Search" />
-        </div>
+# Chart 8: Projection & Forecast with Confidence Bands
+def create_projection_chart():
+    try:
+        fig = go.Figure()
         
-        <div class="header-actions">
-            <span class="header-icon">📧</span>
-            <span class="header-icon">🔔</span>
-            <span class="header-icon">⚙️</span>
+        # Upper confidence bound (invisible, for fill)
+        fig.add_trace(go.Scatter(
+            x=data['projections']['Month'],
+            y=data['projections']['Upper_Confidence'],
+            mode='lines',
+            line={'width': 0},
+            showlegend=False,
+            hoverinfo='skip',
+            name='Upper Bound'
+        ))
+        
+        # Lower confidence bound with fill
+        fig.add_trace(go.Scatter(
+            x=data['projections']['Month'],
+            y=data['projections']['Lower_Confidence'],
+            mode='lines',
+            line={'width': 0},
+            fill='tonexty',
+            fillcolor='rgba(212, 175, 55, 0.2)',
+            name='Confidence Interval',
+            hovertemplate='<b>%{x|%Y-%m}</b><br>Range: %{y:,.0f} - %{customdata:,.0f}<extra></extra>',
+            customdata=data['projections']['Upper_Confidence']
+        ))
+        
+        # Main forecast line
+        fig.add_trace(go.Scatter(
+            x=data['projections']['Month'],
+            y=data['projections']['Forecast'],
+            mode='lines+markers',
+            line={'color': COLORS['gold_primary'], 'width': 4},
+            marker={'size': 8, 'color': COLORS['highlight_gold']},
+            name='Revenue Forecast',
+            hovertemplate='<b>%{x|%Y-%m}</b><br>Forecast: $%{y:,.0f}<extra></extra>'
+        ))
+        
+        layout = get_base_layout('12-Month Revenue Projection')
+        layout['xaxis']['title'] = 'Month'
+        layout['yaxis']['title'] = 'Revenue ($)'
+        layout['yaxis']['tickformat'] = '$,.0f'
+        
+        fig.update_layout(layout)
+        return fig
+    except Exception as e:
+        print(f"Error creating projection chart: {str(e)}")
+        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+
+# Enhanced CSS with better responsive design
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>LexCura Executive Dashboard</title>
+        {%favicon%}
+        {%css%}
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
             
-            <div class="user-profile">
-                <div class="user-name">{user.full_name}</div>
-                <div class="user-avatar">{user.full_name[0]}</div>
-            </div>
-        </div>
-    </div>
-    """
-    
-    st.markdown(header_html, unsafe_allow_html=True)
+            body {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                background-color: #0F1113;
+                color: #B8B9BB;
+                overflow-x: hidden;
+            }
+            
+            .sidebar {
+                background: linear-gradient(180deg, #1B1D1F 0%, #0F1113 100%);
+                border-right: 2px solid #D4AF37;
+                height: 100vh;
+                position: fixed;
+                width: 280px;
+                padding: 30px 20px;
+                z-index: 1000;
+                box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+            }
+            
+            .logo {
+                font-size: 26px;
+                font-weight: 700;
+                color: #D4AF37;
+                margin-bottom: 40px;
+                padding-bottom: 20px;
+                border-bottom: 1px solid #2A2D30;
+                text-align: center;
+            }
+            
+            .nav-item {
+                color: #B8B9BB;
+                padding: 15px 20px;
+                margin: 8px 0;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-weight: 500;
+                border-left: 3px solid transparent;
+            }
+            
+            .nav-item:hover {
+                background-color: rgba(212, 175, 55, 0.1);
+                color: #FFCF66;
+                border-left-color: #D4AF37;
+                transform: translateX(5px);
+            }
+            
+            .main-content {
+                margin-left: 280px;
+                padding: 20px;
+                min-height: 100vh;
+            }
+            
+            .header {
+                background: linear-gradient(135deg, #1B1D1F 0%, #2A2D30 100%);
+                padding: 30px;
+                border-radius: 15px;
+                margin-bottom: 30px;
+                border-left: 5px solid #D4AF37;
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            }
+            
+            .header h1 {
+                color: #D4AF37;
+                margin: 0;
+                font-size: 32px;
+                font-weight: 700;
+                letter-spacing: -0.5px;
+            }
+            
+            .header p {
+                color: #B8B9BB;
+                margin: 15px 0 0 0;
+                font-size: 14px;
+                opacity: 0.8;
+            }
+            
+            .card {
+                background: linear-gradient(145deg, #1B1D1F 0%, #252830 100%);
+                border-radius: 15px;
+                padding: 25px;
+                margin: 15px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+                border: 1px solid #2A2D30;
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #D4AF37, #FFCF66);
+            }
+            
+            .card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+            }
+            
+            .chart-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+            
+            /* Mobile responsive */
+            @media (max-width: 1200px) {
+                .chart-grid {
+                    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+                }
+            }
+            
+            @media (max-width: 900px) {
+                .sidebar {
+                    transform: translateX(-100%);
+                    transition: transform 0.3s ease;
+                }
+                
+                .main-content {
+                    margin-left: 0;
+                    padding: 15px;
+                }
+                
+                .chart-grid {
+                    grid-template-columns: 1fr;
+                    gap: 15px;
+                }
+                
+                .card {
+                    margin: 8px;
+                    padding: 20px;
+                }
+                
+                .header h1 {
+                    font-size: 24px;
+                }
+            }
+            
+            @media (max-width: 600px) {
+                .header {
+                    padding: 20px;
+                }
+                
+                .card {
+                    padding: 15px;
+                }
+            }
+            
+            /* Loading animation */
+            .loading {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 200px;
+                color: #D4AF37;
+            }
+            
+            /* Scrollbar styling */
+            ::-webkit-scrollbar {
+                width: 8px;
+            }
+            
+            ::-webkit-scrollbar-track {
+                background: #0F1113;
+            }
+            
+            ::-webkit-scrollbar-thumb {
+                background: #D4AF37;
+                border-radius: 4px;
+            }
+            
+            ::-webkit-scrollbar-thumb:hover {
+                background: #FFCF66;
+            }
+        </style>
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
 
-def render_kpi_cards(kpi_data: Dict):
-    """Render KPI cards matching Pinterest design"""
+# Main app layout
+app.layout = html.Div([
+    # Sidebar Navigation
+    html.Div([
+        html.Div("LexCura Dashboard", className="logo"),
+        html.Div([
+            html.Div("📊 Overview", className="nav-item"),
+            html.Div("📈 Analytics", className="nav-item"),
+            html.Div("📋 Reports", className="nav-item"),
+            html.Div("⚙️ Settings", className="nav-item"),
+            html.Div("🔒 Security", className="nav-item"),
+        ])
+    ], className="sidebar"),
     
-    # Generate sparkline data
-    sparkline_values = [20, 25, 22, 30, 28, 35, 32, 38, 36, 42]
-    
-    kpi_html = f"""
-    <div class="kpi-container">
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div class="kpi-icon">💰</div>
-                <span class="kpi-menu">⋮</span>
-            </div>
-            <div class="kpi-value">36,159</div>
-            <div class="kpi-label">8 mins read</div>
-            <div class="kpi-change positive">+2.5% from last month</div>
-        </div>
+    # Main Content Area
+    html.Div([
+        # Header Section
+        html.Div([
+            html.H1("Executive Business Intelligence Dashboard"),
+            html.P(f"Last Updated: {datetime.now().strftime('%A, %B %d, %Y at %I:%M %p')}")
+        ], className="header"),
         
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div class="kpi-icon">👥</div>
-                <span class="kpi-menu">⋮</span>
-            </div>
-            <div class="kpi-value">3,359</div>
-            <div class="kpi-label">6 mins read</div>
-            <div class="kpi-change positive">+12.3% from last month</div>
-        </div>
+        # Charts Grid Container
+        html.Div([
+            # Financial Impact Chart
+            html.Div([
+                dcc.Graph(
+                    id='financial-impact-chart',
+                    figure=create_financial_chart(),
+                    config={'displayModeBar': False, 'responsive': True},
+                    style={'height': '420px'}
+                )
+            ], className="card"),
+            
+            # Deadline Tracker Chart
+            html.Div([
+                dcc.Graph(
+                    id='deadline-tracker-chart',
+                    figure=create_deadline_chart(),
+                    config={'displayModeBar': False, 'responsive': True},
+                    style={'height': '420px'}
+                )
+            ], className="card"),
+            
+            # Alert Severity Chart
+            html.Div([
+                dcc.Graph(
+                    id='alert-severity-chart',
+                    figure=create_alert_chart(),
+                    config={'displayModeBar': False, 'responsive': True},
+                    style={'height': '420px'}
+                )
+            ], className="card"),
+            
+            # Historical Trends Chart
+            html.Div([
+                dcc.Graph(
+                    id='historical-trends-chart',
+                    figure=create_historical_chart(),
+                    config={'displayModeBar': False, 'responsive': True},
+                    style={'height': '420px'}
+                )
+            ], className="card"),
+            
+            # Growth vs Decline Chart
+            html.Div([
+                dcc.Graph(
+                    id='growth-decline-chart',
+                    figure=create_growth_chart(),
+                    config={'displayModeBar': False, 'responsive': True},
+                    style={'height': '420px'}
+                )
+            ], className="card"),
+            
+            # Performance Comparison Chart
+            html.Div([
+                dcc.Graph(
+                    id='performance-comparison-chart',
+                    figure=create_performance_chart(),
+                    config={'displayModeBar': False, 'responsive': True},
+                    style={'height': '420px'}
+                )
+            ], className="card"),
+            
+            # Risk & Compliance Gauge
+            html.Div([
+                dcc.Graph(
+                    id='risk-compliance-gauge',
+                    figure=create_risk_gauge(),
+                    config={'displayModeBar': False, 'responsive': True},
+                    style={'height': '420px'}
+                )
+            ], className="card"),
+            
+            # Projection & Forecast Chart
+            html.Div([
+                dcc.Graph(
+                    id='projection-forecast-chart',
+                    figure=create_projection_chart(),
+                    config={'displayModeBar': False, 'responsive': True},
+                    style={'height': '420px'}
+                )
+            ], className="card"),
+            
+        ], className="chart-grid"),
         
-        <div class="kpi-card featured">
-            <div class="kpi-header">
-                <div class="kpi-icon">📈</div>
-                <span class="kpi-menu">⋮</span>
-            </div>
-            <div class="kpi-value">36,159</div>
-            <div class="kpi-label">4 mins read</div>
-            <div class="kpi-change positive">+8.1% from last month</div>
-        </div>
-    </div>
-    """
-    
-    st.markdown(kpi_html, unsafe_allow_html=True)
-
-def render_calendar_widget():
-    """Render calendar widget matching Pinterest design"""
-    
-    current_date = datetime.now()
-    current_month = current_date.month
-    current_year = current_date.year
-    today = current_date.day
-    
-    # Get calendar data
-    cal = calendar.monthcalendar(current_year, current_month)
-    month_name = calendar.month_name[current_month]
-    
-    # Generate calendar HTML
-    calendar_html = f"""
-    <div class="calendar-container">
-        <div class="calendar-header">
-            <div class="calendar-month">{month_name} {current_year}</div>
-            <div class="calendar-nav">
-                <button class="calendar-nav-btn">❮</button>
-                <button class="calendar-nav-btn">❯</button>
-            </div>
-        </div>
+        # Auto-refresh interval component
+        dcc.Interval(
+            id='auto-refresh-interval',
+            interval=300000,  # 5 minutes in milliseconds
+            n_intervals=0
+        ),
         
-        <div class="calendar-grid">
+        # Status indicator
+        html.Div([
+            html.Div(id='status-indicator', children=[
+                html.Span("🟢 ", style={'color': COLORS['success_green']}),
+                html.Span("System Online", style={'color': COLORS['neutral_text']})
+            ], style={'text-align': 'center', 'padding': '20px', 'font-size': '14px'})
+        ])
+        
+    ], className="main-content")
+])
+
+# Callback for auto-refresh functionality
+@app.callback(
+    [Output('financial-impact-chart', 'figure'),
+     Output('deadline-tracker-chart', 'figure'),
+     Output('alert-severity-chart', 'figure'),
+     Output('historical-trends-chart', 'figure'),
+     Output('growth-decline-chart', 'figure'),
+     Output('performance-comparison-chart', 'figure'),
+     Output('risk-compliance-gauge', 'figure'),
+     Output('projection-forecast-chart', 'figure'),
+     Output('status-indicator', 'children')],
+    [Input('auto-refresh-interval', 'n_intervals')]
+)
+def update_dashboard_charts(n_intervals):
     """
-    
-    # Add day headers
-    days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-    for day in days:
-        calendar_html += f'<div class="calendar-day" style="font-weight: 700; color: var(--text-neutral);">{day}</div>'
-    
-    # Add calendar days
-    for week in cal:
-        for day in week:
-            if day == 0:
-                calendar_html += '<div class="calendar-day other-month"></div>'
-            else:
-                classes = "calendar-day"
-                if day == today:
-                    classes += " today"
-                calendar_html += f'<div class="{classes}">{day}</div>'
-    
-    calendar_html += """
-        </div>
-    </div>
+    Auto-refresh all charts every 5 minutes
     """
-    
-    st.markdown(calendar_html, unsafe_allow_html=True)
+    try:
+        # Regenerate data with slight variations for realistic updates
+        global data
+        data = generate_sample_data()
+        
+        # Create status indicator
+        current_time = datetime.now().strftime('%I:%M %p')
+        status_indicator = [
+            html.Span("🟢 ", style={'color': COLORS['success_green']}),
+            html.Span(f"Live Data - Updated at {current_time}", 
+                     style={'color': COLORS['neutral_text']})
+        ]
+        
+        return (
+            create_financial_chart(),
+            create_deadline_chart(),
+            create_alert_chart(),
+            create_historical_chart(),
+            create_growth_chart(),
+            create_performance_chart(),
+            create_risk_gauge(),
+            create_projection_chart(),
+            status_indicator
+        )
+        
+    except Exception as e:
+        print(f"Error in dashboard update callback: {str(e)}")
+        # Return current figures if update fails
+        error_status = [
+            html.Span("🔴 ", style={'color': COLORS['danger_red']}),
+            html.Span("Update Error - Using Cached Data", 
+                     style={'color': COLORS['neutral_text']})
+        ]
+        
+        return (
+            create_financial_chart(),
+            create_deadline_chart(),
+            create_alert_chart(),
+            create_historical_chart(),
+            create_growth_chart(),
+            create_performance_chart(),
+            create_risk_gauge(),
+            create_projection_chart(),
+            error_status
+        )
 
-def render_donut_widget(product_data: Dict):
-    """Render donut chart widget"""
-    
-    donut_html = f"""
-    <div class="widget-card">
-        <div class="widget-title">Top Product Sale</div>
-        <div class="donut-container">
-            <div class="donut-center">
-                <div class="donut-value">95K</div>
-                <div class="donut-label">TOTAL</div>
-            </div>
-        </div>
-        <div class="donut-legend">
-            <div class="legend-item">
-                <div class="legend-dot" style="background: {ExecutivePalette.METALLIC_GOLD};"></div>
-                <span>Vector</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-dot" style="background: {ExecutivePalette.NEUTRAL_TEXT};"></div>
-                <span>Template</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-dot" style="background: {ExecutivePalette.LIGHT_CARD};"></div>
-                <span>Presentation</span>
-            </div>
-        </div>
-    </div>
-    """
-    
-    st.markdown(donut_html, unsafe_allow_html=True)
-    
-    # Add actual donut chart
-    fig = create_donut_chart(product_data)
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+# Health check endpoint for Render
+@app.server.route('/health')
+def health_check():
+    return {'status': 'healthy', 'timestamp': datetime.now().isoformat()}
 
-def render_traffic_widget(traffic_data: List[Dict]):
-    """Render traffic source widget"""
+# Main application entry point
+if __name__ == '__main__':
+    # Get port from environment variable (Render provides this)
+    port = int(os.environ.get('PORT', 8050))
     
-    traffic_html = f"""
-    <div class="widget-card">
-        <div class="widget-title">Traffic Source</div>
-        <div class="traffic-list">
-    """
-    
-    for item in traffic_data:
-        traffic_html += f"""
-        <div class="traffic-item">
-            <span class="traffic-source">{item['source']}</span>
-            <div class="traffic-bar">
-                <div class="traffic-fill" style="width: {item['percentage']}%;"></div>
-            </div>
-            <span class="traffic-percent">{item['percentage']}%</span>
-        </div>
-        """
-    
-    traffic_html += """
-        </div>
-    </div>
-    """
-    
-    st.markdown(traffic_html, unsafe_allow_html=True)
-
-# ============================================================================
-# MAIN DASHBOARD
-# ============================================================================
-
-def render_main_dashboard():
-    """Render main dashboard matching Pinterest design exactly"""
-    
-    # Load data
-    data = load_executive_data()
-    
-    # Render sidebar
-    render_sidebar()
-    
-    # Main content area
-    st.markdown('<div class="main-content animate-fade-in">', unsafe_allow_html=True)
-    
-    # Header
-    render_header(st.session_state.user)
-    
-    # KPI Cards
-    render_kpi_cards(data['kpi_data'])
-    
-    # Content Grid (Chart + Right Sidebar)
-    st.markdown('<div class="content-grid">', unsafe_allow_html=True)
-    
-    # Left Column - Main Chart
-    st.markdown('<div class="chart-main animate-slide-in">', unsafe_allow_html=True)
-    
-    # Create and display area chart
-    area_fig = create_area_chart(data['area_chart_data'])
-    st.plotly_chart(area_fig, use_container_width=True, config={'displayModeBar': False})
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Right Column - Widgets
-    st.markdown('<div class="right-sidebar">', unsafe_allow_html=True)
-    
-    # Donut Chart Widget
-    render_donut_widget(data['product_sales'])
-    
-    # Traffic Source Widget  
-    render_traffic_widget(data['traffic_sources'])
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)  # Close content-grid
-    
-    # Calendar Widget (full width below)
-    render_calendar_widget()
-    
-    st.markdown('</div>', unsafe_allow_html=True)  # Close main-content
-
-def check_authentication() -> bool:
-    """Check if user is authenticated"""
-    return st.session_state.get('authenticated', False)
-
-# ============================================================================
-# MAIN APPLICATION
-# ============================================================================
-
-def main():
-    """Main application entry point"""
-    
-    # Configure page
-    configure_executive_page()
-    initialize_session_state()
-    register_executive_plotly_theme()
-    load_executive_css()          # Load inline CSS styles
-    load_external_css()           # Load external CSS file from assets/
-    
-    # Check authentication
-    if not check_authentication():
-        render_login_page()
-        return
-    
-    # Handle logout
-    if st.session_state.get('logout_requested', False):
-        auth_manager = AuthenticationManager()
-        auth_manager.logout_user()
-        return
-    
-    # Render main dashboard
-    render_main_dashboard()
-    
-    # Add logout handler in sidebar
-    with st.sidebar:
-        if st.button("🚪 LOGOUT", key="logout_btn", use_container_width=True):
-            st.session_state.logout_requested = True
-            st.rerun()
-
-if __name__ == "__main__":
-    main()
+    # Run the app
+    app.run_server(
+        debug=False,  # Never use debug=True in production
+        host='0.0.0.0',  # Required for Render
+        port=port
+    )
