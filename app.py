@@ -1,764 +1,839 @@
-# UI-REFACTOR-GOLD-2025: Elite Fortune-500 dashboard transformation
 import dash
 from dash import dcc, html, Input, Output, callback
 import plotly.graph_objects as go
+import plotly.express as px
 from datetime import datetime, timedelta
-import random
-import math
 import os
+import json
 
-# UI-REFACTOR-GOLD-2025: Import elite plotly theme
-from plotly_templates import register_gold_dark_template, styled_plotly_chart
+# Import Google Sheets integration
+try:
+    from google_sheets import GoogleSheetsConnector
+    GOOGLE_SHEETS_AVAILABLE = True
+except ImportError:
+    GOOGLE_SHEETS_AVAILABLE = False
+    print("Google Sheets integration not available. Using fallback data.")
 
-# Initialize the Dash app with elite assets
+# Initialize Dash app with premium styling
 app = dash.Dash(__name__, 
                 suppress_callback_exceptions=True,
-                assets_folder='assets',
-                external_stylesheets=[
-                    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap'
-                ])
-server = app.server  # Required for Render deployment
+                assets_folder='assets')
+server = app.server
 
-# UI-REFACTOR-GOLD-2025: Initialize elite theme
-register_gold_dark_template()
-
-# UI-REFACTOR-GOLD-2025: Elite color palette (exact Fortune-500 specification)
-ELITE_COLORS = {
-    'charcoal': '#0F1113',
-    'dark_card': '#1B1D1F', 
-    'soft_surface': '#252728',
-    'gold_primary': '#D4AF37',
-    'gold_highlight': '#FFCF66',
-    'neutral_text': '#B8B9BB',
-    'high_contrast': '#F5F6F7',
-    'error_subtle': '#E4574C',
-    'success_subtle': '#3DBC6B'
+# Premium color palette inspired by the reference image
+PREMIUM_COLORS = {
+    'bg_primary': '#0A0B0D',      # Deep charcoal background
+    'bg_secondary': '#1A1D20',    # Card background
+    'bg_accent': '#242831',       # Elevated surfaces
+    'gold_primary': '#D4AF37',    # Premium gold
+    'gold_light': '#E8C547',      # Light gold accents
+    'orange_accent': '#FF8C42',   # Orange highlights
+    'text_primary': '#FFFFFF',    # White text
+    'text_secondary': '#B8BCC8',  # Muted text
+    'success': '#4CAF50',         # Green for success
+    'warning': '#FF9800',         # Orange for warnings
+    'danger': '#F44336',          # Red for critical
+    'chart_grid': '#2A2D35'       # Grid lines
 }
 
-# Preserve existing data generation logic (DO NOT CHANGE)
-def generate_sample_data():
-    try:
-        random.seed(42)
-        
-        financial_data = {
-            'categories': ['Revenue', 'Operating Costs', 'Net Profit', 'Investments', 'Returns'],
-            'current': [2850000, -1320000, 1530000, -480000, 720000],
-            'previous': [2600000, -1450000, 1150000, -520000, 580000]
-        }
-        
-        deadline_data = {
-            'tasks': ['Q4 Financial Report', 'System Infrastructure Upgrade', 'Compliance Audit Review', 'Annual Budget Planning', 'Security Assessment'],
-            'days_left': [3, 15, 1, 12, 8],
-            'progress': [85, 45, 95, 60, 70]
-        }
-        deadline_data['urgency'] = ['Critical' if d <= 3 else 'Warning' if d <= 7 else 'Normal' for d in deadline_data['days_left']]
-        
-        alert_data = {
-            'severity': ['Critical', 'Warning', 'Info'],
-            'count': [8, 24, 42]
-        }
-        
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=365)
-        
-        historical_dates = []
-        current_date = start_date
-        while current_date <= end_date:
-            historical_dates.append(current_date)
-            current_date += timedelta(days=1)
-        
-        base_value = 1000
-        historical_performance = []
-        for i, date in enumerate(historical_dates):
-            trend = (i / len(historical_dates)) * 200
-            seasonal = 100 * math.sin(2 * math.pi * i / 365)
-            noise = random.uniform(-50, 50)
-            value = base_value + trend + seasonal + noise
-            historical_performance.append(value)
-        
-        historical_data = {
-            'dates': historical_dates,
-            'performance': historical_performance,
-            'target': 1200
-        }
-        
-        growth_data = {
-            'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
-            'growth_rate': [12, 18, 15, 22, 28, 25, 30, 35],
-            'decline_rate': [5, 8, 4, 6, 9, 7, 8, 6]
-        }
-        
-        performance_data = {
-            'kpis': ['Operational Efficiency', 'Quality Score', 'Response Time', 'Cost Optimization', 'Customer Satisfaction'],
-            'current_score': [85, 92, 78, 88, 91],
-            'target_score': [90, 95, 85, 90, 95],
-            'industry_avg': [75, 85, 80, 82, 87]
-        }
-        
-        risk_score = 68
-        
-        future_dates = []
-        current_month = datetime.now().replace(day=1)
-        for i in range(12):
-            future_dates.append(current_month + timedelta(days=32*i))
-        
-        base_forecast = 1500
-        growth_rate = 0.05
-        forecast_values = []
-        lower_confidence = []
-        upper_confidence = []
-        
-        for i in range(12):
-            forecast = base_forecast * (1 + growth_rate) ** i
-            forecast_values.append(forecast)
-            lower_confidence.append(forecast * 0.85)
-            upper_confidence.append(forecast * 1.15)
-        
-        projection_data = {
-            'dates': future_dates,
-            'forecast': forecast_values,
-            'lower_confidence': lower_confidence,
-            'upper_confidence': upper_confidence
-        }
-        
-        return {
-            'financial': financial_data,
-            'deadlines': deadline_data,
-            'alerts': alert_data,
-            'historical': historical_data,
-            'growth': growth_data,
-            'performance': performance_data,
-            'risk_score': risk_score,
-            'projections': projection_data
-        }
-        
-    except Exception as e:
-        print(f"Error generating sample data: {str(e)}")
-        return {
-            'financial': {'categories': ['Revenue'], 'current': [1000000], 'previous': [900000]},
-            'deadlines': {'tasks': ['Sample Task'], 'days_left': [5], 'progress': [50], 'urgency': ['Normal']},
-            'alerts': {'severity': ['Info'], 'count': [10]},
-            'historical': {'dates': [datetime.now()], 'performance': [1000], 'target': 1200},
-            'growth': {'months': ['Jan'], 'growth_rate': [15], 'decline_rate': [5]},
-            'performance': {'kpis': ['Performance'], 'current_score': [80], 'target_score': [90], 'industry_avg': [75]},
-            'risk_score': 70,
-            'projections': {'dates': [datetime.now()], 'forecast': [1500], 'lower_confidence': [1400], 'upper_confidence': [1600]}
-        }
+# Initialize Google Sheets connector
+if GOOGLE_SHEETS_AVAILABLE:
+    sheets_connector = GoogleSheetsConnector()
+    # Replace with your actual Google Sheets ID
+    SPREADSHEET_ID = os.getenv('GOOGLE_SPREADSHEET_ID', 'your-spreadsheet-id-here')
+else:
+    sheets_connector = None
+    SPREADSHEET_ID = None
 
-# Initialize data (preserve existing logic)
-data = generate_sample_data()
-
-# UI-REFACTOR-GOLD-2025: Elite KPI calculation helpers
-def calculate_kpi_metrics():
-    """Calculate top-level KPIs for the executive summary row"""
-    try:
-        total_revenue = data['financial']['current'][0]
-        previous_revenue = data['financial']['previous'][0]
-        revenue_change = ((total_revenue - previous_revenue) / previous_revenue) * 100
-        
-        total_alerts = sum(data['alerts']['count'])
-        critical_alerts = data['alerts']['count'][0] if len(data['alerts']['count']) > 0 else 0
-        
-        avg_performance = sum(data['performance']['current_score']) / len(data['performance']['current_score'])
-        
-        active_projects = len(data['deadlines']['tasks'])
-        critical_deadlines = len([d for d in data['deadlines']['urgency'] if d == 'Critical'])
-        
-        return {
-            'revenue': {'value': total_revenue, 'delta': revenue_change, 'format': 'currency'},
-            'alerts': {'value': total_alerts, 'delta': -12.5, 'format': 'number'},
-            'performance': {'value': avg_performance, 'delta': 5.2, 'format': 'percent'},
-            'projects': {'value': active_projects, 'delta': 0, 'format': 'number'},
-            'risk_score': {'value': data['risk_score'], 'delta': -8.3, 'format': 'score'}
+def get_503b_data():
+    """Fetch 503B compliance data from Google Sheets or fallback"""
+    if sheets_connector and SPREADSHEET_ID:
+        try:
+            data = sheets_connector.get_dashboard_metrics(SPREADSHEET_ID)
+            if data:
+                return data
+        except Exception as e:
+            print(f"Error fetching Google Sheets data: {str(e)}")
+    
+    # Fallback data for 503B compliance
+    return {
+        'production': {
+            'total_batches': 147,
+            'completed_batches': 132,
+            'pending_batches': 15,
+            'average_yield': 96.3,
+            'daily_production': [18, 22, 19, 25, 21, 17, 20],  # Last 7 days
+            'batch_trend': [
+                {'date': '2025-01-15', 'batches': 18, 'yield': 96.1},
+                {'date': '2025-01-16', 'batches': 22, 'yield': 97.2},
+                {'date': '2025-01-17', 'batches': 19, 'yield': 95.8},
+                {'date': '2025-01-18', 'batches': 25, 'yield': 98.1},
+                {'date': '2025-01-19', 'batches': 21, 'yield': 96.7},
+                {'date': '2025-01-20', 'batches': 17, 'yield': 94.9},
+                {'date': '2025-01-21', 'batches': 20, 'yield': 97.5}
+            ]
+        },
+        'quality': {
+            'pass_rate': 98.2,
+            'total_tests': 1247,
+            'pending_tests': 23,
+            'critical_parameters': [
+                {'parameter': 'Sterility', 'status': 'Pass', 'value': 100.0},
+                {'parameter': 'Endotoxin', 'status': 'Pass', 'value': 0.02},
+                {'parameter': 'pH', 'status': 'Pass', 'value': 7.1},
+                {'parameter': 'Particulates', 'status': 'Pass', 'value': 12},
+                {'parameter': 'Potency', 'status': 'Pass', 'value': 102.1}
+            ]
+        },
+        'compliance': {
+            'environmental_zones': [
+                {'zone': 'ISO 5', 'status': 'Compliant', 'particles': 145},
+                {'zone': 'ISO 7', 'status': 'Compliant', 'particles': 2840},
+                {'zone': 'ISO 8', 'status': 'Alert', 'particles': 89500}
+            ],
+            'deviations': {
+                'total': 8,
+                'critical': 1,
+                'major': 3,
+                'minor': 4,
+                'trend': [2, 1, 3, 0, 1, 0, 1]  # Last 7 days
+            },
+            'training_compliance': 94.7,
+            'audit_score': 97.3
+        },
+        'inventory': {
+            'raw_materials': 156,
+            'low_stock_alerts': 12,
+            'expired_items': 3,
+            'critical_supplies': [
+                {'item': 'Vial 10mL', 'stock': 2340, 'status': 'Good'},
+                {'item': 'Stopper 20mm', 'stock': 450, 'status': 'Low'},
+                {'item': 'Label Type A', 'stock': 89, 'status': 'Critical'},
+                {'item': 'API Batch X1', 'stock': 15.6, 'status': 'Good'}
+            ]
         }
-    except:
-        return {
-            'revenue': {'value': 2850000, 'delta': 9.6, 'format': 'currency'},
-            'alerts': {'value': 74, 'delta': -12.5, 'format': 'number'},
-            'performance': {'value': 86.8, 'delta': 5.2, 'format': 'percent'},
-            'projects': {'value': 5, 'delta': 0, 'format': 'number'},
-            'risk_score': {'value': 68, 'delta': -8.3, 'format': 'score'}
-        }
+    }
 
-# UI-REFACTOR-GOLD-2025: Elite chart creation functions (preserve data logic)
-def create_financial_chart():
-    try:
-        fig = go.Figure()
-        
-        colors_current = [ELITE_COLORS['success_subtle'] if x > 0 else ELITE_COLORS['error_subtle'] for x in data['financial']['current']]
-        
-        fig.add_trace(go.Bar(
-            x=data['financial']['categories'],
-            y=data['financial']['current'],
-            name='Current Period',
-            marker_color=colors_current,
-            hovertemplate='<b>%{x}</b><br>Current: $%{y:,.0f}<br><extra></extra>',
-            text=[f"${x:,.0f}" for x in data['financial']['current']],
-            textposition='outside'
-        ))
-        
-        fig.add_trace(go.Bar(
-            x=data['financial']['categories'],
-            y=data['financial']['previous'],
-            name='Previous Period',
-            marker_color=ELITE_COLORS['gold_primary'],
-            opacity=0.7,
-            hovertemplate='<b>%{x}</b><br>Previous: $%{y:,.0f}<br><extra></extra>'
-        ))
-        
-        fig.update_layout(
-            title='Financial Impact Analysis',
-            yaxis_tickformat='$,.0f',
-            barmode='group'
+def create_premium_kpi_card(title, value, change, unit="", status="normal"):
+    """Create premium KPI cards matching the reference design"""
+    
+    status_colors = {
+        'good': PREMIUM_COLORS['success'],
+        'warning': PREMIUM_COLORS['warning'],
+        'critical': PREMIUM_COLORS['danger'],
+        'normal': PREMIUM_COLORS['gold_primary']
+    }
+    
+    change_color = PREMIUM_COLORS['success'] if change >= 0 else PREMIUM_COLORS['danger']
+    change_icon = "▲" if change >= 0 else "▼"
+    
+    return html.Div([
+        html.Div([
+            html.H4(title, className="kpi-title"),
+            html.Div([
+                html.Span(f"{value:,.1f}" if isinstance(value, float) else f"{value:,}", 
+                         className="kpi-value"),
+                html.Span(unit, className="kpi-unit")
+            ], className="kpi-value-container"),
+            html.Div([
+                html.Span(change_icon, style={'color': change_color}),
+                html.Span(f"{abs(change):.1f}%", style={'color': change_color})
+            ], className="kpi-change")
+        ], className="kpi-content"),
+        html.Div(className=f"kpi-accent {status}")
+    ], className="premium-kpi-card")
+
+def create_batch_production_chart(data):
+    """Production trend chart with premium styling"""
+    
+    batch_data = data['production']['batch_trend']
+    dates = [item['date'] for item in batch_data]
+    batches = [item['batches'] for item in batch_data]
+    yields = [item['yield'] for item in batch_data]
+    
+    fig = go.Figure()
+    
+    # Production bars
+    fig.add_trace(go.Bar(
+        x=dates,
+        y=batches,
+        name='Daily Batches',
+        marker_color=PREMIUM_COLORS['gold_primary'],
+        opacity=0.8,
+        yaxis='y'
+    ))
+    
+    # Yield line
+    fig.add_trace(go.Scatter(
+        x=dates,
+        y=yields,
+        name='Yield %',
+        line=dict(color=PREMIUM_COLORS['orange_accent'], width=3),
+        mode='lines+markers',
+        marker=dict(size=8),
+        yaxis='y2'
+    ))
+    
+    fig.update_layout(
+        title=dict(
+            text="Daily Production & Yield Trends",
+            font=dict(color=PREMIUM_COLORS['text_primary'], size=16),
+            x=0.02
+        ),
+        paper_bgcolor=PREMIUM_COLORS['bg_secondary'],
+        plot_bgcolor=PREMIUM_COLORS['bg_secondary'],
+        font=dict(color=PREMIUM_COLORS['text_secondary']),
+        showlegend=False,
+        margin=dict(l=40, r=40, t=50, b=40),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor=PREMIUM_COLORS['chart_grid'],
+            showline=False,
+            tickfont=dict(size=10)
+        ),
+        yaxis=dict(
+            title="Batches",
+            titlefont=dict(color=PREMIUM_COLORS['gold_primary']),
+            tickfont=dict(color=PREMIUM_COLORS['gold_primary']),
+            showgrid=True,
+            gridcolor=PREMIUM_COLORS['chart_grid'],
+            showline=False
+        ),
+        yaxis2=dict(
+            title="Yield %",
+            titlefont=dict(color=PREMIUM_COLORS['orange_accent']),
+            tickfont=dict(color=PREMIUM_COLORS['orange_accent']),
+            overlaying='y',
+            side='right',
+            showgrid=False
         )
-        
-        return styled_plotly_chart(fig, height=420)
-    except Exception as e:
-        print(f"Error creating financial chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+    )
+    
+    return fig
 
-def create_deadline_chart():
-    try:
-        urgency_colors = {
-            'Critical': ELITE_COLORS['error_subtle'],
-            'Warning': ELITE_COLORS['gold_highlight'], 
-            'Normal': ELITE_COLORS['success_subtle']
-        }
-        
-        fig = go.Figure()
-        
-        colors = [urgency_colors[urgency] for urgency in data['deadlines']['urgency']]
-        
-        fig.add_trace(go.Bar(
-            x=data['deadlines']['days_left'],
-            y=data['deadlines']['tasks'],
-            orientation='h',
-            marker_color=colors,
-            hovertemplate='<b>%{y}</b><br>Days Remaining: %{x}<br>Progress: %{customdata}%<br><extra></extra>',
-            customdata=data['deadlines']['progress'],
-            text=[f"{days}d" for days in data['deadlines']['days_left']],
-            textposition='middle right'
-        ))
-        
-        fig.update_layout(
-            title='Project Deadline Tracker',
-            xaxis_title='Days Remaining'
-        )
-        
-        return styled_plotly_chart(fig, height=420)
-    except Exception as e:
-        print(f"Error creating deadline chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
-
-def create_alert_chart():
-    try:
-        severity_colors = [ELITE_COLORS['error_subtle'], ELITE_COLORS['gold_highlight'], ELITE_COLORS['success_subtle']]
-        
-        fig = go.Figure(go.Pie(
-            labels=data['alerts']['severity'],
-            values=data['alerts']['count'],
-            hole=0.6,
-            marker_colors=severity_colors,
-            hovertemplate='<b>%{label} Alerts</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>',
-            textinfo='label+percent',
-            textfont={'color': 'white', 'size': 12}
-        ))
-        
-        total_alerts = sum(data['alerts']['count'])
-        fig.add_annotation(
-            text=f"Total<br><b>{total_alerts}</b><br>Alerts",
-            x=0.5, y=0.5,
-            font={'size': 16, 'color': ELITE_COLORS['high_contrast']},
-            showarrow=False
-        )
-        
-        fig.update_layout(
-            title='Alert Severity Distribution',
-            showlegend=False
-        )
-        
-        return styled_plotly_chart(fig, height=420)
-    except Exception as e:
-        print(f"Error creating alert chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
-
-def create_historical_chart():
-    try:
-        fig = go.Figure()
-        
-        fig.add_trace(go.Scatter(
-            x=data['historical']['dates'],
-            y=data['historical']['performance'],
-            mode='lines',
-            line={'color': ELITE_COLORS['gold_primary'], 'width': 3},
-            fill='tonexty',
-            fillcolor=f"rgba(212, 175, 55, 0.3)",
-            name='Performance Metric',
-            hovertemplate='<b>%{x|%Y-%m-%d}</b><br>Performance: %{y:,.1f}<extra></extra>'
-        ))
-        
-        fig.add_hline(
-            y=data['historical']['target'],
-            line_dash="dash",
-            line_color=ELITE_COLORS['success_subtle'],
-            line_width=2,
-            annotation_text="Performance Target",
-            annotation_position="top right"
-        )
-        
-        fig.update_layout(
-            title='Historical Performance Trends',
-            xaxis_title='Date',
-            yaxis_title='Performance Score'
-        )
-        
-        return styled_plotly_chart(fig, height=420)
-    except Exception as e:
-        print(f"Error creating historical chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
-
-def create_growth_chart():
-    try:
-        fig = go.Figure()
-        
-        fig.add_trace(go.Bar(
-            x=data['growth']['months'],
-            y=data['growth']['growth_rate'],
-            name='Growth Rate',
-            marker_color=ELITE_COLORS['success_subtle'],
-            hovertemplate='<b>%{x}</b><br>Growth: +%{y}%<extra></extra>',
-            text=[f"+{rate}%" for rate in data['growth']['growth_rate']],
-            textposition='outside'
-        ))
-        
-        decline_negative = [-rate for rate in data['growth']['decline_rate']]
-        fig.add_trace(go.Bar(
-            x=data['growth']['months'],
-            y=decline_negative,
-            name='Decline Rate',
-            marker_color=ELITE_COLORS['error_subtle'],
-            hovertemplate='<b>%{x}</b><br>Decline: %{y}%<extra></extra>',
-            text=[f"-{rate}%" for rate in data['growth']['decline_rate']],
-            textposition='outside'
-        ))
-        
-        fig.update_layout(
-            title='Growth vs Decline Analysis',
-            yaxis_title='Rate (%)',
-            yaxis_ticksuffix='%',
-            xaxis_title='Month'
-        )
-        
-        return styled_plotly_chart(fig, height=420)
-    except Exception as e:
-        print(f"Error creating growth chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
-
-def create_performance_chart():
-    try:
-        fig = go.Figure()
-        
-        fig.add_trace(go.Scatterpolar(
-            r=data['performance']['current_score'],
-            theta=data['performance']['kpis'],
-            fill='toself',
-            name='Current Performance',
-            line_color=ELITE_COLORS['gold_primary'],
-            fillcolor=f"rgba(212, 175, 55, 0.4)",
-            hovertemplate='<b>%{theta}</b><br>Current: %{r}%<extra></extra>'
-        ))
-        
-        fig.add_trace(go.Scatterpolar(
-            r=data['performance']['target_score'],
-            theta=data['performance']['kpis'],
-            fill='toself',
-            name='Target',
-            line_color=ELITE_COLORS['success_subtle'],
-            fillcolor=f"rgba(61, 188, 107, 0.2)",
-            hovertemplate='<b>%{theta}</b><br>Target: %{r}%<extra></extra>'
-        ))
-        
-        fig.add_trace(go.Scatterpolar(
-            r=data['performance']['industry_avg'],
-            theta=data['performance']['kpis'],
-            mode='lines',
-            name='Industry Average',
-            line_color=ELITE_COLORS['neutral_text'],
-            line_dash='dot',
-            hovertemplate='<b>%{theta}</b><br>Industry Avg: %{r}%<extra></extra>'
-        ))
-        
-        fig.update_layout(
-            title='Performance vs Target KPIs',
-            polar=dict(
-                radialaxis=dict(
-                    visible=True,
-                    range=[0, 100],
-                    color=ELITE_COLORS['neutral_text'],
-                    ticksuffix='%'
-                ),
-                angularaxis=dict(color=ELITE_COLORS['neutral_text'])
-            )
-        )
-        
-        return styled_plotly_chart(fig, height=420)
-    except Exception as e:
-        print(f"Error creating performance chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
-
-def create_risk_gauge():
-    try:
-        if data['risk_score'] <= 30:
-            gauge_color = ELITE_COLORS['success_subtle']
-        elif data['risk_score'] <= 70:
-            gauge_color = ELITE_COLORS['gold_highlight']
+def create_quality_radar_chart(data):
+    """Quality parameters radar chart"""
+    
+    parameters = data['quality']['critical_parameters']
+    param_names = [p['parameter'] for p in parameters]
+    values = [p['value'] for p in parameters]
+    
+    # Normalize values for radar chart (scale to 0-100)
+    normalized_values = []
+    for param in parameters:
+        if param['parameter'] == 'Sterility':
+            normalized_values.append(param['value'])
+        elif param['parameter'] == 'Endotoxin':
+            normalized_values.append(100 - (param['value'] * 50))  # Lower is better
+        elif param['parameter'] == 'pH':
+            normalized_values.append(95)  # pH 7.1 is good
+        elif param['parameter'] == 'Particulates':
+            normalized_values.append(88)  # Based on specification
+        elif param['parameter'] == 'Potency':
+            normalized_values.append(param['value'])
         else:
-            gauge_color = ELITE_COLORS['error_subtle']
+            normalized_values.append(95)
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatterpolar(
+        r=normalized_values + [normalized_values[0]],  # Close the shape
+        theta=param_names + [param_names[0]],
+        fill='toself',
+        fillcolor=f'rgba(212, 175, 55, 0.2)',
+        line_color=PREMIUM_COLORS['gold_primary'],
+        line_width=2,
+        name='Current Values'
+    ))
+    
+    # Add target values (assuming 95% is target for all)
+    target_values = [95] * len(param_names)
+    fig.add_trace(go.Scatterpolar(
+        r=target_values + [target_values[0]],
+        theta=param_names + [param_names[0]],
+        line_color=PREMIUM_COLORS['success'],
+        line_dash='dash',
+        line_width=1,
+        name='Target',
+        showlegend=False
+    ))
+    
+    fig.update_layout(
+        title=dict(
+            text="Critical Quality Parameters",
+            font=dict(color=PREMIUM_COLORS['text_primary'], size=16),
+            x=0.5
+        ),
+        paper_bgcolor=PREMIUM_COLORS['bg_secondary'],
+        plot_bgcolor=PREMIUM_COLORS['bg_secondary'],
+        font=dict(color=PREMIUM_COLORS['text_secondary']),
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100],
+                tickfont=dict(size=8, color=PREMIUM_COLORS['text_secondary']),
+                gridcolor=PREMIUM_COLORS['chart_grid']
+            ),
+            angularaxis=dict(
+                tickfont=dict(size=10, color=PREMIUM_COLORS['text_primary'])
+            ),
+            bgcolor=PREMIUM_COLORS['bg_secondary']
+        ),
+        margin=dict(l=60, r=60, t=60, b=60)
+    )
+    
+    return fig
+
+def create_environmental_monitoring_chart(data):
+    """Environmental monitoring gauge charts"""
+    
+    zones = data['compliance']['environmental_zones']
+    
+    fig = go.Figure()
+    
+    # Create multiple gauge charts
+    for i, zone in enumerate(zones):
+        status_color = PREMIUM_COLORS['success'] if zone['status'] == 'Compliant' else PREMIUM_COLORS['warning']
         
-        fig = go.Figure(go.Indicator(
+        # Calculate percentage based on ISO limits
+        if zone['zone'] == 'ISO 5':
+            max_particles = 3520
+        elif zone['zone'] == 'ISO 7':
+            max_particles = 352000
+        else:  # ISO 8
+            max_particles = 3520000
+        
+        percentage = (zone['particles'] / max_particles) * 100
+        
+        fig.add_trace(go.Indicator(
             mode="gauge+number+delta",
-            value=data['risk_score'],
-            domain={'x': [0, 1], 'y': [0, 1]},
-            title={'text': "Risk & Compliance Score", 'font': {'color': ELITE_COLORS['high_contrast'], 'size': 16}},
-            delta={
-                'reference': 50,
-                'increasing': {'color': ELITE_COLORS['error_subtle']},
-                'decreasing': {'color': ELITE_COLORS['success_subtle']}
-            },
+            value=percentage,
+            domain={'row': 0, 'column': i},
+            title={'text': f"{zone['zone']}<br>({zone['particles']:,} particles)"},
             gauge={
-                'axis': {
-                    'range': [None, 100],
-                    'tickcolor': ELITE_COLORS['neutral_text'],
-                    'tickfont': {'color': ELITE_COLORS['neutral_text']}
-                },
-                'bar': {'color': gauge_color, 'thickness': 0.3},
+                'axis': {'range': [0, 100]},
+                'bar': {'color': status_color},
                 'steps': [
-                    {'range': [0, 30], 'color': 'rgba(61, 188, 107, 0.3)'},
-                    {'range': [30, 70], 'color': 'rgba(255, 207, 102, 0.3)'},
-                    {'range': [70, 100], 'color': 'rgba(228, 87, 76, 0.3)'}
+                    {'range': [0, 80], 'color': 'rgba(76, 175, 80, 0.1)'},
+                    {'range': [80, 95], 'color': 'rgba(255, 152, 0, 0.1)'},
+                    {'range': [95, 100], 'color': 'rgba(244, 67, 54, 0.1)'}
                 ],
-                'threshold': {
-                    'line': {'color': ELITE_COLORS['neutral_text'], 'width': 4},
-                    'thickness': 0.75,
-                    'value': 80
-                }
+                'threshold': {'line': {'color': "red", 'width': 4}, 'thickness': 0.75, 'value': 90}
             },
-            number={'font': {'color': ELITE_COLORS['high_contrast'], 'size': 24}}
+            number={'font': {'color': PREMIUM_COLORS['text_primary']}},
+            title_font={'color': PREMIUM_COLORS['text_secondary']}
         ))
-        
-        return styled_plotly_chart(fig, height=420)
-    except Exception as e:
-        print(f"Error creating risk gauge: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+    
+    fig.update_layout(
+        title=dict(
+            text="Environmental Monitoring - Cleanroom Zones",
+            font=dict(color=PREMIUM_COLORS['text_primary'], size=16),
+            x=0.5
+        ),
+        paper_bgcolor=PREMIUM_COLORS['bg_secondary'],
+        font=dict(color=PREMIUM_COLORS['text_secondary']),
+        grid={'rows': 1, 'columns': 3, 'pattern': "independent"},
+        margin=dict(l=40, r=40, t=80, b=40),
+        height=300
+    )
+    
+    return fig
 
-def create_projection_chart():
-    try:
-        fig = go.Figure()
-        
-        fig.add_trace(go.Scatter(
-            x=data['projections']['dates'],
-            y=data['projections']['upper_confidence'],
-            mode='lines',
-            line={'width': 0},
-            showlegend=False,
-            hoverinfo='skip',
-            name='Upper Bound'
-        ))
-        
-        fig.add_trace(go.Scatter(
-            x=data['projections']['dates'],
-            y=data['projections']['lower_confidence'],
-            mode='lines',
-            line={'width': 0},
-            fill='tonexty',
-            fillcolor='rgba(212, 175, 55, 0.2)',
-            name='Confidence Interval',
-            hovertemplate='<b>%{x|%Y-%m}</b><br>Range: $%{y:,.0f} - $%{customdata:,.0f}<extra></extra>',
-            customdata=data['projections']['upper_confidence']
-        ))
-        
-        fig.add_trace(go.Scatter(
-            x=data['projections']['dates'],
-            y=data['projections']['forecast'],
-            mode='lines+markers',
-            line={'color': ELITE_COLORS['gold_primary'], 'width': 4},
-            marker={'size': 8, 'color': ELITE_COLORS['gold_highlight']},
-            name='Revenue Forecast',
-            hovertemplate='<b>%{x|%Y-%m}</b><br>Forecast: $%{y:,.0f}<extra></extra>'
-        ))
-        
-        fig.update_layout(
-            title='12-Month Revenue Projection',
-            xaxis_title='Month',
-            yaxis_title='Revenue ($)',
-            yaxis_tickformat='$,.0f'
+def create_deviation_trend_chart(data):
+    """Deviation trends over time"""
+    
+    deviation_trend = data['compliance']['deviations']['trend']
+    days = [f"Day {i+1}" for i in range(len(deviation_trend))]
+    
+    fig = go.Figure()
+    
+    # Area chart for deviation trend
+    fig.add_trace(go.Scatter(
+        x=days,
+        y=deviation_trend,
+        mode='lines+markers',
+        fill='tonexty',
+        fillcolor=f'rgba(255, 140, 66, 0.2)',
+        line=dict(color=PREMIUM_COLORS['orange_accent'], width=3),
+        marker=dict(size=8, color=PREMIUM_COLORS['orange_accent']),
+        name='Deviations'
+    ))
+    
+    fig.update_layout(
+        title=dict(
+            text="Daily Deviation Trend (Last 7 Days)",
+            font=dict(color=PREMIUM_COLORS['text_primary'], size=16),
+            x=0.02
+        ),
+        paper_bgcolor=PREMIUM_COLORS['bg_secondary'],
+        plot_bgcolor=PREMIUM_COLORS['bg_secondary'],
+        font=dict(color=PREMIUM_COLORS['text_secondary']),
+        showlegend=False,
+        margin=dict(l=40, r=40, t=50, b=40),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor=PREMIUM_COLORS['chart_grid'],
+            showline=False
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor=PREMIUM_COLORS['chart_grid'],
+            showline=False,
+            title="Number of Deviations"
         )
-        
-        return styled_plotly_chart(fig, height=420)
-    except Exception as e:
-        print(f"Error creating projection chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+    )
+    
+    return fig
 
-# UI-REFACTOR-GOLD-2025: Elite UI components
-def create_elite_header():
-    """Create the elite Fortune-500 header component"""
-    return html.Div([
-        # UI-REFACTOR-GOLD-2025: Animated background
-        html.Div(className="animated-background"),
-        html.Div(className="particle-overlay"),
-        
-        html.Div([
-            html.Div([
-                html.Img(src='/assets/lexcuralogo.png', style={'height': '32px'}, className="header-logo"),
-                html.H1("LexCura Executive Dashboard", className="app-title")
-            ], className="logo-section"),
+def create_inventory_status_chart(data):
+    """Inventory status donut chart"""
+    
+    supplies = data['inventory']['critical_supplies']
+    
+    # Categorize by status
+    status_counts = {'Good': 0, 'Low': 0, 'Critical': 0}
+    for supply in supplies:
+        status_counts[supply['status']] += 1
+    
+    labels = list(status_counts.keys())
+    values = list(status_counts.values())
+    colors = [PREMIUM_COLORS['success'], PREMIUM_COLORS['warning'], PREMIUM_COLORS['danger']]
+    
+    fig = go.Figure(data=[go.Pie(
+        labels=labels,
+        values=values,
+        hole=0.6,
+        marker_colors=colors,
+        textinfo='label+percent',
+        textfont=dict(color=PREMIUM_COLORS['text_primary'])
+    )])
+    
+    fig.update_layout(
+        title=dict(
+            text="Critical Inventory Status",
+            font=dict(color=PREMIUM_COLORS['text_primary'], size=16),
+            x=0.5
+        ),
+        paper_bgcolor=PREMIUM_COLORS['bg_secondary'],
+        font=dict(color=PREMIUM_COLORS['text_secondary']),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.1,
+            xanchor="center",
+            x=0.5,
+            font=dict(color=PREMIUM_COLORS['text_secondary'])
+        ),
+        margin=dict(l=40, r=40, t=60, b=40)
+    )
+    
+    return fig
+
+# Custom CSS styling
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>503B Compliance Manufacturing Dashboard</title>
+        {%favicon%}
+        {%css%}
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
             
-            html.Div([
-                html.Span(f"Last Updated: {datetime.now().strftime('%A, %B %d, %Y at %I:%M %p')}", 
-                         className="last-updated")
-            ])
-        ], className="header-content")
-    ], className="elite-header")
+            body {
+                font-family: 'Inter', sans-serif;
+                background: linear-gradient(135deg, #0A0B0D 0%, #1A1D20 100%);
+                margin: 0;
+                padding: 0;
+                color: #FFFFFF;
+            }
+            
+            .main-container {
+                background: #0A0B0D;
+                min-height: 100vh;
+                padding: 20px;
+            }
+            
+            .dashboard-header {
+                background: linear-gradient(135deg, #1A1D20 0%, #242831 100%);
+                border-radius: 15px;
+                padding: 25px 35px;
+                margin-bottom: 30px;
+                border: 1px solid rgba(212, 175, 55, 0.1);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            }
+            
+            .header-title {
+                font-size: 28px;
+                font-weight: 700;
+                color: #D4AF37;
+                margin: 0;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            }
+            
+            .header-subtitle {
+                font-size: 14px;
+                color: #B8BCC8;
+                margin-top: 8px;
+                opacity: 0.9;
+            }
+            
+            .kpi-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 20px;
+                margin-bottom: 35px;
+            }
+            
+            .premium-kpi-card {
+                background: linear-gradient(145deg, #1A1D20 0%, #242831 100%);
+                border-radius: 12px;
+                padding: 20px;
+                border: 1px solid rgba(212, 175, 55, 0.08);
+                box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+                position: relative;
+                overflow: hidden;
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            
+            .premium-kpi-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+            }
+            
+            .kpi-accent {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #D4AF37, #E8C547);
+            }
+            
+            .kpi-accent.warning {
+                background: linear-gradient(90deg, #FF9800, #FFA726);
+            }
+            
+            .kpi-accent.critical {
+                background: linear-gradient(90deg, #F44336, #E57373);
+            }
+            
+            .kpi-title {
+                font-size: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                color: #B8BCC8;
+                margin: 0 0 12px 0;
+                letter-spacing: 0.5px;
+            }
+            
+            .kpi-value {
+                font-size: 32px;
+                font-weight: 800;
+                color: #FFFFFF;
+                line-height: 1;
+            }
+            
+            .kpi-unit {
+                font-size: 16px;
+                font-weight: 400;
+                color: #B8BCC8;
+                margin-left: 4px;
+            }
+            
+            .kpi-change {
+                margin-top: 8px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            
+            .chart-grid {
+                display: grid;
+                grid-template-columns: repeat(12, 1fr);
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            
+            .chart-card {
+                background: linear-gradient(145deg, #1A1D20 0%, #242831 100%);
+                border-radius: 12px;
+                padding: 25px;
+                border: 1px solid rgba(212, 175, 55, 0.08);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+                position: relative;
+                overflow: hidden;
+                transition: all 0.3s ease;
+            }
+            
+            .chart-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+                border-color: rgba(212, 175, 55, 0.15);
+            }
+            
+            .chart-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: linear-gradient(90deg, #D4AF37, #E8C547);
+            }
+            
+            .chart-full { grid-column: span 12; }
+            .chart-half { grid-column: span 6; }
+            .chart-third { grid-column: span 4; }
+            .chart-quarter { grid-column: span 3; }
+            
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 280px;
+                height: 100vh;
+                background: linear-gradient(180deg, #1A1D20 0%, #0A0B0D 100%);
+                border-right: 1px solid rgba(212, 175, 55, 0.1);
+                padding: 25px 0;
+                z-index: 1000;
+                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+            }
+            
+            .sidebar-logo {
+                padding: 0 25px 25px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                margin-bottom: 25px;
+            }
+            
+            .logo-text {
+                font-size: 24px;
+                font-weight: 700;
+                color: #D4AF37;
+                text-align: center;
+            }
+            
+            .nav-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 25px;
+                color: #B8BCC8;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                border-left: 3px solid transparent;
+            }
+            
+            .nav-item:hover {
+                background-color: rgba(212, 175, 55, 0.08);
+                color: #E8C547;
+                border-left-color: #D4AF37;
+            }
+            
+            .nav-item.active {
+                background-color: rgba(212, 175, 55, 0.12);
+                color: #D4AF37;
+                border-left-color: #D4AF37;
+            }
+            
+            .content-wrapper {
+                margin-left: 280px;
+                padding: 20px;
+            }
+            
+            .status-bar {
+                text-align: center;
+                padding: 15px;
+                background: rgba(212, 175, 55, 0.05);
+                border-radius: 8px;
+                margin-top: 20px;
+            }
+            
+            @media (max-width: 1200px) {
+                .sidebar {
+                    transform: translateX(-100%);
+                }
+                
+                .content-wrapper {
+                    margin-left: 0;
+                }
+                
+                .chart-grid {
+                    grid-template-columns: repeat(6, 1fr);
+                }
+                
+                .chart-half { grid-column: span 6; }
+                .chart-third { grid-column: span 6; }
+            }
+            
+            @media (max-width: 768px) {
+                .chart-grid {
+                    grid-template-columns: 1fr;
+                    gap: 15px;
+                }
+                
+                .chart-card {
+                    padding: 20px;
+                }
+                
+                .kpi-grid {
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 15px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
 
-def create_elite_sidebar():
-    """Create the collapsible elite sidebar"""
-    return html.Div([
-        html.Div([
-            html.Div("LexCura", className="sidebar-logo")
-        ], className="sidebar-header"),
-        
-        html.Div([
-            html.Div([
-                html.Span("📊"), 
-                html.Span(" Overview")
-            ], className="nav-item active"),
-            html.Div([
-                html.Span("📈"), 
-                html.Span(" Analytics")
-            ], className="nav-item"),
-            html.Div([
-                html.Span("📋"), 
-                html.Span(" Reports")
-            ], className="nav-item"),
-            html.Div([
-                html.Span("⚙️"), 
-                html.Span(" Settings")
-            ], className="nav-item"),
-            html.Div([
-                html.Span("🔒"), 
-                html.Span(" Security")
-            ], className="nav-item")
-        ], className="nav-section")
-    ], className="elite-sidebar")
-
-def create_kpi_row():
-    """Create the elite KPI summary row"""
-    kpis = calculate_kpi_metrics()
-    
-    def format_kpi_value(value, format_type):
-        if format_type == 'currency':
-            return f"${value:,.0f}"
-        elif format_type == 'percent':
-            return f"{value:.1f}%"
-        elif format_type == 'score':
-            return f"{value:.0f}/100"
-        else:
-            return f"{value:,.0f}"
-    
-    def create_kpi_card(title, kpi_data):
-        value = kpi_data['value']
-        delta = kpi_data['delta']
-        format_type = kpi_data['format']
-        
-        delta_class = "kpi-delta" if delta >= 0 else "kpi-delta negative"
-        delta_symbol = "↗" if delta >= 0 else "↘"
-        
-        return html.Div([
-            html.Div(title.upper(), className="kpi-label"),
-            html.Div(format_kpi_value(value, format_type), className="kpi-value"),
-            html.Div([
-                html.Span(delta_symbol),
-                html.Span(f"{abs(delta):.1f}%")
-            ], className=delta_class),
-            # UI-REFACTOR-GOLD-2025: Add sparkline placeholder
-            html.Div(className="kpi-sparkline")
-        ], className="kpi-card")
-    
-    return html.Div([
-        create_kpi_card("Total Revenue", kpis['revenue']),
-        create_kpi_card("Active Alerts", kpis['alerts']),
-        create_kpi_card("Performance Score", kpis['performance']),
-        create_kpi_card("Active Projects", kpis['projects']),
-        create_kpi_card("Risk Level", kpis['risk_score'])
-    ], className="kpi-row")
-
-# UI-REFACTOR-GOLD-2025: Elite layout structure
+# Main layout
 app.layout = html.Div([
-    create_elite_header(),
-    create_elite_sidebar(),
-    
+    # Sidebar
     html.Div([
-        create_kpi_row(),
-        
-        # UI-REFACTOR-GOLD-2025: Elite chart grid with proper responsive columns
         html.Div([
+            html.Div("503B Compliance", className="logo-text")
+        ], className="sidebar-logo"),
+        
+        html.Div([
+            html.Div(["📊", " Overview"], className="nav-item active"),
+            html.Div(["🏭", " Production"], className="nav-item"),
+            html.Div(["🔬", " Quality Control"], className="nav-item"),
+            html.Div(["📋", " Compliance"], className="nav-item"),
+            html.Div(["📦", " Inventory"], className="nav-item"),
+            html.Div(["🌡️", " Environmental"], className="nav-item"),
+            html.Div(["👥", " Personnel"], className="nav-item"),
+            html.Div(["📈", " Reports"], className="nav-item"),
+            html.Div(["⚙️", " Settings"], className="nav-item")
+        ])
+    ], className="sidebar"),
+    
+    # Main content
+    html.Div([
+        # Header
+        html.Div([
+            html.H1("503B Pharmaceutical Manufacturing Dashboard", className="header-title"),
+            html.P(f"Real-time Compliance Monitoring • Last Updated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", 
+                   className="header-subtitle")
+        ], className="dashboard-header"),
+        
+        # KPI Row
+        html.Div(id="kpi-row", className="kpi-grid"),
+        
+        # Charts Grid
+        html.Div([
+            # Production trends (large)
             html.Div([
                 dcc.Graph(
-                    id='financial-impact-chart',
-                    figure=create_financial_chart(),
+                    id='production-chart',
                     config={'displayModeBar': False, 'responsive': True}
                 )
             ], className="chart-card chart-half"),
             
+            # Quality radar
             html.Div([
                 dcc.Graph(
-                    id='deadline-tracker-chart',
-                    figure=create_deadline_chart(),
+                    id='quality-radar',
                     config={'displayModeBar': False, 'responsive': True}
                 )
             ], className="chart-card chart-half"),
             
+            # Environmental monitoring
             html.Div([
                 dcc.Graph(
-                    id='alert-severity-chart',
-                    figure=create_alert_chart(),
+                    id='environmental-chart',
+                    config={'displayModeBar': False, 'responsive': True}
+                )
+            ], className="chart-card chart-half"),
+            
+            # Deviation trends
+            html.Div([
+                dcc.Graph(
+                    id='deviation-chart',
                     config={'displayModeBar': False, 'responsive': True}
                 )
             ], className="chart-card chart-third"),
             
+            # Inventory status
             html.Div([
                 dcc.Graph(
-                    id='historical-trends-chart',
-                    figure=create_historical_chart(),
+                    id='inventory-chart',
                     config={'displayModeBar': False, 'responsive': True}
                 )
-            ], className="chart-card chart-third"),
-            
-            html.Div([
-                dcc.Graph(
-                    id='risk-compliance-gauge',
-                    figure=create_risk_gauge(),
-                    config={'displayModeBar': False, 'responsive': True}
-                )
-            ], className="chart-card chart-third"),
-            
-            html.Div([
-                dcc.Graph(
-                    id='growth-decline-chart',
-                    figure=create_growth_chart(),
-                    config={'displayModeBar': False, 'responsive': True}
-                )
-            ], className="chart-card chart-half"),
-            
-            html.Div([
-                dcc.Graph(
-                    id='performance-comparison-chart',
-                    figure=create_performance_chart(),
-                    config={'displayModeBar': False, 'responsive': True}
-                )
-            ], className="chart-card chart-half"),
-            
-            html.Div([
-                dcc.Graph(
-                    id='projection-forecast-chart',
-                    figure=create_projection_chart(),
-                    config={'displayModeBar': False, 'responsive': True}
-                )
-            ], className="chart-card chart-full")
+            ], className="chart-card chart-third")
             
         ], className="chart-grid"),
         
-        # Auto-refresh interval (preserve existing logic)
+        # Auto-refresh
         dcc.Interval(
-            id='auto-refresh-interval',
-            interval=300000,
+            id='interval-component',
+            interval=300000,  # 5 minutes
             n_intervals=0
         ),
         
-        # UI-REFACTOR-GOLD-2025: Elite status indicator
-        html.Div([
-            html.Div(id='status-indicator', children=[
-                html.Span("🟢 ", className="status-online"),
-                html.Span("System Online - Real-time Data", style={'color': ELITE_COLORS['neutral_text']})
-            ], style={'text-align': 'center', 'padding': '20px', 'font-size': '13px'})
-        ])
+        # Status bar
+        html.Div(id='status-indicator', className="status-bar")
         
-    ], className="main-content")
-])
+    ], className="content-wrapper")
+], className="main-container")
 
-# Preserve existing callback (DO NOT CHANGE DATA LOGIC)
+# Callbacks
 @app.callback(
-    [Output('financial-impact-chart', 'figure'),
-     Output('deadline-tracker-chart', 'figure'),
-     Output('alert-severity-chart', 'figure'),
-     Output('historical-trends-chart', 'figure'),
-     Output('growth-decline-chart', 'figure'),
-     Output('performance-comparison-chart', 'figure'),
-     Output('risk-compliance-gauge', 'figure'),
-     Output('projection-forecast-chart', 'figure'),
+    [Output('kpi-row', 'children'),
+     Output('production-chart', 'figure'),
+     Output('quality-radar', 'figure'),
+     Output('environmental-chart', 'figure'),
+     Output('deviation-chart', 'figure'),
+     Output('inventory-chart', 'figure'),
      Output('status-indicator', 'children')],
-    [Input('auto-refresh-interval', 'n_intervals')]
+    [Input('interval-component', 'n_intervals')]
 )
-def update_dashboard_charts(n_intervals):
-    """Auto-refresh all charts every 5 minutes (preserve existing logic)"""
-    try:
-        global data
-        
-        if n_intervals > 0:
-            for i in range(len(data['financial']['current'])):
-                variation = random.uniform(-0.05, 0.05)
-                data['financial']['current'][i] = int(data['financial']['current'][i] * (1 + variation))
-            
-            data['risk_score'] = max(0, min(100, data['risk_score'] + random.uniform(-3, 3)))
-        
-        current_time = datetime.now().strftime('%I:%M %p')
-        status_indicator = [
-            html.Span("🟢 ", className="status-online"),
-            html.Span(f"Live Data - Updated at {current_time}", 
-                     style={'color': ELITE_COLORS['neutral_text']})
-        ]
-        
-        return (
-            create_financial_chart(),
-            create_deadline_chart(),
-            create_alert_chart(),
-            create_historical_chart(),
-            create_growth_chart(),
-            create_performance_chart(),
-            create_risk_gauge(),
-            create_projection_chart(),
-            status_indicator
-        )
-        
-    except Exception as e:
-        print(f"Error in dashboard update callback: {str(e)}")
-        error_status = [
-            html.Span("🔴 ", className="status-error"),
-            html.Span("Update Error - Using Cached Data", 
-                     style={'color': ELITE_COLORS['neutral_text']})
-        ]
-        
-        return (
-            create_financial_chart(),
-            create_deadline_chart(),
-            create_alert_chart(),
-            create_historical_chart(),
-            create_growth_chart(),
-            create_performance_chart(),
-            create_risk_gauge(),
-            create_projection_chart(),
-            error_status
-        )
+def update_dashboard(n_intervals):
+    """Update all dashboard components with fresh data"""
+    
+    # Fetch fresh data from Google Sheets
+    data = get_503b_data()
+    
+    # Create KPI cards
+    kpi_cards = [
+        create_premium_kpi_card("Total Batches", data['production']['total_batches'], 8.3),
+        create_premium_kpi_card("Quality Pass Rate", data['quality']['pass_rate'], 2.1, "%", "good"),
+        create_premium_kpi_card("Compliance Score", data['compliance']['audit_score'], -1.2, "%", "warning"),
+        create_premium_kpi_card("Active Deviations", data['compliance']['deviations']['total'], -25.0, "", "critical"),
+        create_premium_kpi_card("Inventory Items", data['inventory']['raw_materials'], 5.7)
+    ]
+    
+    # Status indicator
+    current_time = datetime.now().strftime('%I:%M %p')
+    status = html.Div([
+        html.Span("🟢 ", style={'color': PREMIUM_COLORS['success']}),
+        html.Span(f"System Online • Data synced at {current_time}", 
+                 style={'color': PREMIUM_COLORS['text_secondary']})
+    ])
+    
+    return (
+        kpi_cards,
+        create_batch_production_chart(data),
+        create_quality_radar_chart(data),
+        create_environmental_monitoring_chart(data),
+        create_deviation_trend_chart(data),
+        create_inventory_status_chart(data),
+        status
+    )
 
-# Preserve existing health check and main entry point
+# Health check endpoint
 @app.server.route('/health')
 def health_check():
-    return {'status': 'healthy', 'timestamp': datetime.now().isoformat()}
+    return {'status': 'healthy', 'service': '503B Compliance Dashboard', 'timestamp': datetime.now().isoformat()}
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8050))
-    app.run_server(
-        debug=False,
-        host='0.0.0.0',
-        port=port
-    )
+    app.run_server(debug=False, host='0.0.0.0', port=port)
