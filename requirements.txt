@@ -1,15 +1,19 @@
-# LexCura Elite Executive Dashboard - Python 3.13 Compatible
-# No pandas dependency - using pure Python data structures
+# 503B Compliance Manufacturing Dashboard
+# Google Sheets integration for real-time data
 
 # Core Framework
 dash==2.17.1
 plotly==5.17.0
 
-# Minimal dependencies for Python 3.13
-gunicorn==22.0.0
+# Google Sheets Integration
+gspread==6.1.2
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
 
-# Optional utilities (all Python 3.13 compatible)
+# Utilities
 python-dateutil==2.9.0
 pytz==2024.1
 
-
+# Production Server
+gunicorn==22.0.0
