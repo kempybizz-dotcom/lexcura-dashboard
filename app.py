@@ -1,133 +1,107 @@
 import dash
 from dash import dcc, html, Input, Output, callback
 import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime, timedelta
 import os
-import json
 
-# Import Google Sheets integration
+# Import your master sheet connector
 try:
-    from google_sheets import GoogleSheetsConnector
+    from google_sheets_503b import Master503BConnector
     GOOGLE_SHEETS_AVAILABLE = True
 except ImportError:
     GOOGLE_SHEETS_AVAILABLE = False
     print("Google Sheets integration not available. Using fallback data.")
 
-# Initialize Dash app with premium styling
-app = dash.Dash(__name__, 
-                suppress_callback_exceptions=True,
-                assets_folder='assets')
+# Initialize Dash app
+app = dash.Dash(__name__, suppress_callback_exceptions=True)
 server = app.server
 
-# Premium color palette inspired by the reference image
-PREMIUM_COLORS = {
-    'bg_primary': '#0A0B0D',      # Deep charcoal background
-    'bg_secondary': '#1A1D20',    # Card background
-    'bg_accent': '#242831',       # Elevated surfaces
-    'gold_primary': '#D4AF37',    # Premium gold
-    'gold_light': '#E8C547',      # Light gold accents
-    'orange_accent': '#FF8C42',   # Orange highlights
-    'text_primary': '#FFFFFF',    # White text
-    'text_secondary': '#B8BCC8',  # Muted text
-    'success': '#4CAF50',         # Green for success
-    'warning': '#FF9800',         # Orange for warnings
-    'danger': '#F44336',          # Red for critical
-    'chart_grid': '#2A2D35'       # Grid lines
+# Premium color palette matching your reference image
+COLORS = {
+    'bg_primary': '#0A0B0D',
+    'bg_secondary': '#1A1D20', 
+    'bg_accent': '#242831',
+    'gold_primary': '#D4AF37',
+    'gold_light': '#E8C547',
+    'orange_accent': '#FF8C42',
+    'text_primary': '#FFFFFF',
+    'text_secondary': '#B8BCC8',
+    'success': '#4CAF50',
+    'warning': '#FF9800',
+    'danger': '#F44336'
 }
 
-# Initialize Google Sheets connector
+# Initialize connector to your master sheet
 if GOOGLE_SHEETS_AVAILABLE:
-    sheets_connector = GoogleSheetsConnector()
-    # Replace with your actual Google Sheets ID
-    SPREADSHEET_ID = os.getenv('GOOGLE_SPREADSHEET_ID', 'your-spreadsheet-id-here')
+    master_connector = Master503BConnector()
 else:
-    sheets_connector = None
-    SPREADSHEET_ID = None
+    master_connector = None
 
-def get_503b_data():
-    """Fetch 503B compliance data from Google Sheets or fallback"""
-    if sheets_connector and SPREADSHEET_ID:
+def get_live_data():
+    """Get live data from your master sheet or fallback"""
+    if master_connector:
         try:
-            data = sheets_connector.get_dashboard_metrics(SPREADSHEET_ID)
-            if data:
-                return data
+            return master_connector.get_dashboard_data()
         except Exception as e:
-            print(f"Error fetching Google Sheets data: {str(e)}")
+            print(f"Error fetching live data: {str(e)}")
     
-    # Fallback data for 503B compliance
+    # Fallback 503B data
     return {
-        'production': {
-            'total_batches': 147,
-            'completed_batches': 132,
-            'pending_batches': 15,
-            'average_yield': 96.3,
-            'daily_production': [18, 22, 19, 25, 21, 17, 20],  # Last 7 days
-            'batch_trend': [
-                {'date': '2025-01-15', 'batches': 18, 'yield': 96.1},
-                {'date': '2025-01-16', 'batches': 22, 'yield': 97.2},
-                {'date': '2025-01-17', 'batches': 19, 'yield': 95.8},
-                {'date': '2025-01-18', 'batches': 25, 'yield': 98.1},
-                {'date': '2025-01-19', 'batches': 21, 'yield': 96.7},
-                {'date': '2025-01-20', 'batches': 17, 'yield': 94.9},
-                {'date': '2025-01-21', 'batches': 20, 'yield': 97.5}
-            ]
+        'kpis': {
+            'total_batches': {'value': 147, 'change': 8.3, 'status': 'good'},
+            'quality_pass_rate': {'value': 98.2, 'change': 2.1, 'status': 'good'},
+            'compliance_score': {'value': 97.3, 'change': -1.2, 'status': 'warning'},
+            'active_deviations': {'value': 3, 'change': -25.0, 'status': 'warning'},
+            'inventory_alerts': {'value': 12, 'change': 15.2, 'status': 'warning'}
         },
-        'quality': {
-            'pass_rate': 98.2,
-            'total_tests': 1247,
-            'pending_tests': 23,
-            'critical_parameters': [
-                {'parameter': 'Sterility', 'status': 'Pass', 'value': 100.0},
-                {'parameter': 'Endotoxin', 'status': 'Pass', 'value': 0.02},
-                {'parameter': 'pH', 'status': 'Pass', 'value': 7.1},
-                {'parameter': 'Particulates', 'status': 'Pass', 'value': 12},
-                {'parameter': 'Potency', 'status': 'Pass', 'value': 102.1}
-            ]
-        },
-        'compliance': {
-            'environmental_zones': [
-                {'zone': 'ISO 5', 'status': 'Compliant', 'particles': 145},
-                {'zone': 'ISO 7', 'status': 'Compliant', 'particles': 2840},
-                {'zone': 'ISO 8', 'status': 'Alert', 'particles': 89500}
+        'charts': {
+            'production_trend': [
+                {'day': 'Day -6', 'batches': 18, 'yield': 96.1},
+                {'day': 'Day -5', 'batches': 22, 'yield': 97.2},
+                {'day': 'Day -4', 'batches': 19, 'yield': 95.8},
+                {'day': 'Day -3', 'batches': 25, 'yield': 98.1},
+                {'day': 'Day -2', 'batches': 21, 'yield': 96.7},
+                {'day': 'Day -1', 'batches': 17, 'yield': 94.9},
+                {'day': 'Today', 'batches': 23, 'yield': 97.5}
             ],
-            'deviations': {
+            'quality_parameters': [
+                {'parameter': 'Sterility', 'value': 100.0},
+                {'parameter': 'Endotoxin Control', 'value': 99.0},
+                {'parameter': 'pH Balance', 'value': 95.0},
+                {'parameter': 'Particulate Control', 'value': 88.0},
+                {'parameter': 'Potency Assurance', 'value': 102.0}
+            ],
+            'environmental_zones': [
+                {'zone': 'ISO 5', 'particles': 145, 'status': 'Compliant'},
+                {'zone': 'ISO 7', 'particles': 2840, 'status': 'Compliant'},
+                {'zone': 'ISO 8', 'particles': 89500, 'status': 'Alert'}
+            ],
+            'deviation_analysis': {
+                'trend': [2, 1, 3, 0, 1, 0, 1],
                 'total': 8,
-                'critical': 1,
-                'major': 3,
-                'minor': 4,
-                'trend': [2, 1, 3, 0, 1, 0, 1]  # Last 7 days
+                'critical': 1
             },
-            'training_compliance': 94.7,
-            'audit_score': 97.3
-        },
-        'inventory': {
-            'raw_materials': 156,
-            'low_stock_alerts': 12,
-            'expired_items': 3,
-            'critical_supplies': [
-                {'item': 'Vial 10mL', 'stock': 2340, 'status': 'Good'},
-                {'item': 'Stopper 20mm', 'stock': 450, 'status': 'Low'},
-                {'item': 'Label Type A', 'stock': 89, 'status': 'Critical'},
-                {'item': 'API Batch X1', 'stock': 15.6, 'status': 'Good'}
-            ]
+            'inventory_status': {
+                'status_breakdown': {'Good': 141, 'Low Stock': 12, 'Critical': 3}
+            }
         }
     }
 
-def create_premium_kpi_card(title, value, change, unit="", status="normal"):
-    """Create premium KPI cards matching the reference design"""
-    
+def create_kpi_card(title, value, change, unit="", status="normal"):
+    """Create premium KPI cards matching reference design"""
     status_colors = {
-        'good': PREMIUM_COLORS['success'],
-        'warning': PREMIUM_COLORS['warning'],
-        'critical': PREMIUM_COLORS['danger'],
-        'normal': PREMIUM_COLORS['gold_primary']
+        'good': COLORS['success'],
+        'warning': COLORS['warning'], 
+        'critical': COLORS['danger'],
+        'normal': COLORS['gold_primary']
     }
     
-    change_color = PREMIUM_COLORS['success'] if change >= 0 else PREMIUM_COLORS['danger']
+    change_color = COLORS['success'] if change >= 0 else COLORS['danger']
     change_icon = "▲" if change >= 0 else "▼"
+    accent_class = f"kpi-accent-{status}"
     
     return html.Div([
+        html.Div(className=accent_class),
         html.Div([
             html.H4(title, className="kpi-title"),
             html.Div([
@@ -139,338 +113,330 @@ def create_premium_kpi_card(title, value, change, unit="", status="normal"):
                 html.Span(change_icon, style={'color': change_color}),
                 html.Span(f"{abs(change):.1f}%", style={'color': change_color})
             ], className="kpi-change")
-        ], className="kpi-content"),
-        html.Div(className=f"kpi-accent {status}")
+        ])
     ], className="premium-kpi-card")
 
-def create_batch_production_chart(data):
-    """Production trend chart with premium styling"""
+def create_production_chart(data):
+    """Production & yield trend chart"""
+    trend_data = data['charts']['production_trend']
     
-    batch_data = data['production']['batch_trend']
-    dates = [item['date'] for item in batch_data]
-    batches = [item['batches'] for item in batch_data]
-    yields = [item['yield'] for item in batch_data]
+    days = [item['day'] for item in trend_data]
+    batches = [item['batches'] for item in trend_data]
+    yields = [item['yield'] for item in trend_data]
     
     fig = go.Figure()
     
-    # Production bars
+    # Production bars with gradient
     fig.add_trace(go.Bar(
-        x=dates,
+        x=days,
         y=batches,
         name='Daily Batches',
-        marker_color=PREMIUM_COLORS['gold_primary'],
-        opacity=0.8,
+        marker_color=COLORS['gold_primary'],
+        opacity=0.9,
+        hovertemplate='<b>%{x}</b><br>Batches: %{y}<extra></extra>',
         yaxis='y'
     ))
     
-    # Yield line
+    # Yield percentage line
     fig.add_trace(go.Scatter(
-        x=dates,
+        x=days,
         y=yields,
         name='Yield %',
-        line=dict(color=PREMIUM_COLORS['orange_accent'], width=3),
+        line=dict(color=COLORS['orange_accent'], width=4),
         mode='lines+markers',
-        marker=dict(size=8),
+        marker=dict(size=10, color=COLORS['orange_accent']),
+        hovertemplate='<b>%{x}</b><br>Yield: %{y:.1f}%<extra></extra>',
         yaxis='y2'
     ))
     
     fig.update_layout(
         title=dict(
-            text="Daily Production & Yield Trends",
-            font=dict(color=PREMIUM_COLORS['text_primary'], size=16),
+            text="Daily Production & Yield Performance",
+            font=dict(color=COLORS['text_primary'], size=18, weight=600),
             x=0.02
         ),
-        paper_bgcolor=PREMIUM_COLORS['bg_secondary'],
-        plot_bgcolor=PREMIUM_COLORS['bg_secondary'],
-        font=dict(color=PREMIUM_COLORS['text_secondary']),
+        paper_bgcolor=COLORS['bg_secondary'],
+        plot_bgcolor=COLORS['bg_secondary'],
+        font=dict(color=COLORS['text_secondary'], family="Inter"),
         showlegend=False,
-        margin=dict(l=40, r=40, t=50, b=40),
+        margin=dict(l=50, r=50, t=60, b=50),
+        hovermode='x unified',
         xaxis=dict(
             showgrid=True,
-            gridcolor=PREMIUM_COLORS['chart_grid'],
+            gridcolor='rgba(255,255,255,0.05)',
             showline=False,
-            tickfont=dict(size=10)
+            tickfont=dict(size=11, color=COLORS['text_secondary'])
         ),
         yaxis=dict(
-            title="Batches",
-            titlefont=dict(color=PREMIUM_COLORS['gold_primary']),
-            tickfont=dict(color=PREMIUM_COLORS['gold_primary']),
+            title="Batches Produced",
+            titlefont=dict(color=COLORS['gold_primary'], size=12),
+            tickfont=dict(color=COLORS['gold_primary'], size=11),
             showgrid=True,
-            gridcolor=PREMIUM_COLORS['chart_grid'],
+            gridcolor='rgba(255,255,255,0.05)',
             showline=False
         ),
         yaxis2=dict(
             title="Yield %",
-            titlefont=dict(color=PREMIUM_COLORS['orange_accent']),
-            tickfont=dict(color=PREMIUM_COLORS['orange_accent']),
+            titlefont=dict(color=COLORS['orange_accent'], size=12),
+            tickfont=dict(color=COLORS['orange_accent'], size=11),
             overlaying='y',
             side='right',
-            showgrid=False
+            showgrid=False,
+            range=[85, 105]
         )
     )
     
     return fig
 
-def create_quality_radar_chart(data):
+def create_quality_radar(data):
     """Quality parameters radar chart"""
+    params = data['charts']['quality_parameters']
     
-    parameters = data['quality']['critical_parameters']
-    param_names = [p['parameter'] for p in parameters]
-    values = [p['value'] for p in parameters]
-    
-    # Normalize values for radar chart (scale to 0-100)
-    normalized_values = []
-    for param in parameters:
-        if param['parameter'] == 'Sterility':
-            normalized_values.append(param['value'])
-        elif param['parameter'] == 'Endotoxin':
-            normalized_values.append(100 - (param['value'] * 50))  # Lower is better
-        elif param['parameter'] == 'pH':
-            normalized_values.append(95)  # pH 7.1 is good
-        elif param['parameter'] == 'Particulates':
-            normalized_values.append(88)  # Based on specification
-        elif param['parameter'] == 'Potency':
-            normalized_values.append(param['value'])
-        else:
-            normalized_values.append(95)
+    param_names = [p['parameter'] for p in params]
+    values = [p['value'] for p in params]
     
     fig = go.Figure()
     
+    # Main radar trace
     fig.add_trace(go.Scatterpolar(
-        r=normalized_values + [normalized_values[0]],  # Close the shape
+        r=values + [values[0]],
         theta=param_names + [param_names[0]],
         fill='toself',
-        fillcolor=f'rgba(212, 175, 55, 0.2)',
-        line_color=PREMIUM_COLORS['gold_primary'],
-        line_width=2,
-        name='Current Values'
+        fillcolor='rgba(212, 175, 55, 0.25)',
+        line_color=COLORS['gold_primary'],
+        line_width=3,
+        name='Current Performance',
+        hovertemplate='<b>%{theta}</b><br>Score: %{r:.1f}%<extra></extra>'
     ))
     
-    # Add target values (assuming 95% is target for all)
+    # Target line at 95%
     target_values = [95] * len(param_names)
     fig.add_trace(go.Scatterpolar(
         r=target_values + [target_values[0]],
         theta=param_names + [param_names[0]],
-        line_color=PREMIUM_COLORS['success'],
+        line_color=COLORS['success'],
         line_dash='dash',
-        line_width=1,
-        name='Target',
-        showlegend=False
+        line_width=2,
+        name='Target (95%)',
+        showlegend=False,
+        hovertemplate='<b>Target</b><br>95%<extra></extra>'
     ))
     
     fig.update_layout(
         title=dict(
             text="Critical Quality Parameters",
-            font=dict(color=PREMIUM_COLORS['text_primary'], size=16),
+            font=dict(color=COLORS['text_primary'], size=18, weight=600),
             x=0.5
         ),
-        paper_bgcolor=PREMIUM_COLORS['bg_secondary'],
-        plot_bgcolor=PREMIUM_COLORS['bg_secondary'],
-        font=dict(color=PREMIUM_COLORS['text_secondary']),
+        paper_bgcolor=COLORS['bg_secondary'],
+        plot_bgcolor=COLORS['bg_secondary'],
+        font=dict(color=COLORS['text_secondary'], family="Inter"),
         polar=dict(
             radialaxis=dict(
                 visible=True,
-                range=[0, 100],
-                tickfont=dict(size=8, color=PREMIUM_COLORS['text_secondary']),
-                gridcolor=PREMIUM_COLORS['chart_grid']
+                range=[75, 105],
+                tickfont=dict(size=9, color=COLORS['text_secondary']),
+                gridcolor='rgba(255,255,255,0.1)'
             ),
             angularaxis=dict(
-                tickfont=dict(size=10, color=PREMIUM_COLORS['text_primary'])
+                tickfont=dict(size=11, color=COLORS['text_primary'])
             ),
-            bgcolor=PREMIUM_COLORS['bg_secondary']
+            bgcolor=COLORS['bg_secondary']
         ),
-        margin=dict(l=60, r=60, t=60, b=60)
+        margin=dict(l=60, r=60, t=70, b=60)
     )
     
     return fig
 
-def create_environmental_monitoring_chart(data):
-    """Environmental monitoring gauge charts"""
-    
-    zones = data['compliance']['environmental_zones']
+def create_environmental_gauges(data):
+    """Environmental monitoring gauges"""
+    zones = data['charts']['environmental_zones']
     
     fig = go.Figure()
     
-    # Create multiple gauge charts
     for i, zone in enumerate(zones):
-        status_color = PREMIUM_COLORS['success'] if zone['status'] == 'Compliant' else PREMIUM_COLORS['warning']
+        status_color = COLORS['success'] if zone['status'] == 'Compliant' else COLORS['danger']
         
-        # Calculate percentage based on ISO limits
-        if zone['zone'] == 'ISO 5':
-            max_particles = 3520
-        elif zone['zone'] == 'ISO 7':
-            max_particles = 352000
-        else:  # ISO 8
-            max_particles = 3520000
-        
-        percentage = (zone['particles'] / max_particles) * 100
+        # Calculate compliance percentage
+        limits = {'ISO 5': 3520, 'ISO 7': 352000, 'ISO 8': 3520000}
+        max_particles = limits.get(zone['zone'], 1000000)
+        compliance_pct = max(0, 100 - (zone['particles'] / max_particles) * 100)
         
         fig.add_trace(go.Indicator(
-            mode="gauge+number+delta",
-            value=percentage,
+            mode="gauge+number",
+            value=compliance_pct,
             domain={'row': 0, 'column': i},
-            title={'text': f"{zone['zone']}<br>({zone['particles']:,} particles)"},
-            gauge={
-                'axis': {'range': [0, 100]},
-                'bar': {'color': status_color},
-                'steps': [
-                    {'range': [0, 80], 'color': 'rgba(76, 175, 80, 0.1)'},
-                    {'range': [80, 95], 'color': 'rgba(255, 152, 0, 0.1)'},
-                    {'range': [95, 100], 'color': 'rgba(244, 67, 54, 0.1)'}
-                ],
-                'threshold': {'line': {'color': "red", 'width': 4}, 'thickness': 0.75, 'value': 90}
+            title={
+                'text': f"<b>{zone['zone']}</b><br><span style='font-size:10px'>{zone['particles']:,} particles</span>",
+                'font': {'size': 12, 'color': COLORS['text_primary']}
             },
-            number={'font': {'color': PREMIUM_COLORS['text_primary']}},
-            title_font={'color': PREMIUM_COLORS['text_secondary']}
+            gauge={
+                'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': COLORS['text_secondary']},
+                'bar': {'color': status_color, 'thickness': 0.8},
+                'steps': [
+                    {'range': [0, 70], 'color': 'rgba(244, 67, 54, 0.2)'},
+                    {'range': [70, 85], 'color': 'rgba(255, 152, 0, 0.2)'},
+                    {'range': [85, 100], 'color': 'rgba(76, 175, 80, 0.2)'}
+                ],
+                'threshold': {
+                    'line': {'color': COLORS['gold_primary'], 'width': 4},
+                    'thickness': 0.75,
+                    'value': 90
+                }
+            },
+            number={'font': {'color': COLORS['text_primary'], 'size': 14}}
         ))
     
     fig.update_layout(
         title=dict(
-            text="Environmental Monitoring - Cleanroom Zones",
-            font=dict(color=PREMIUM_COLORS['text_primary'], size=16),
+            text="Environmental Monitoring - Cleanroom Compliance",
+            font=dict(color=COLORS['text_primary'], size=18),
             x=0.5
         ),
-        paper_bgcolor=PREMIUM_COLORS['bg_secondary'],
-        font=dict(color=PREMIUM_COLORS['text_secondary']),
+        paper_bgcolor=COLORS['bg_secondary'],
+        font=dict(color=COLORS['text_secondary'], family="Inter"),
         grid={'rows': 1, 'columns': 3, 'pattern': "independent"},
         margin=dict(l=40, r=40, t=80, b=40),
-        height=300
+        height=350
     )
     
     return fig
 
-def create_deviation_trend_chart(data):
-    """Deviation trends over time"""
-    
-    deviation_trend = data['compliance']['deviations']['trend']
-    days = [f"Day {i+1}" for i in range(len(deviation_trend))]
+def create_deviation_trend(data):
+    """Deviation trend analysis"""
+    deviation_data = data['charts']['deviation_analysis']
+    days = [f"Day {i-6}" if i < 6 else "Today" for i in range(7)]
+    trend = deviation_data['trend']
     
     fig = go.Figure()
     
-    # Area chart for deviation trend
+    # Area chart for deviations
     fig.add_trace(go.Scatter(
         x=days,
-        y=deviation_trend,
+        y=trend,
         mode='lines+markers',
-        fill='tonexty',
-        fillcolor=f'rgba(255, 140, 66, 0.2)',
-        line=dict(color=PREMIUM_COLORS['orange_accent'], width=3),
-        marker=dict(size=8, color=PREMIUM_COLORS['orange_accent']),
-        name='Deviations'
+        fill='tozeroy',
+        fillcolor='rgba(255, 140, 66, 0.3)',
+        line=dict(color=COLORS['orange_accent'], width=4),
+        marker=dict(size=12, color=COLORS['orange_accent']),
+        name='Daily Deviations',
+        hovertemplate='<b>%{x}</b><br>Deviations: %{y}<extra></extra>'
     ))
     
     fig.update_layout(
         title=dict(
-            text="Daily Deviation Trend (Last 7 Days)",
-            font=dict(color=PREMIUM_COLORS['text_primary'], size=16),
+            text="Quality Deviation Trends (7-Day)",
+            font=dict(color=COLORS['text_primary'], size=18),
             x=0.02
         ),
-        paper_bgcolor=PREMIUM_COLORS['bg_secondary'],
-        plot_bgcolor=PREMIUM_COLORS['bg_secondary'],
-        font=dict(color=PREMIUM_COLORS['text_secondary']),
+        paper_bgcolor=COLORS['bg_secondary'],
+        plot_bgcolor=COLORS['bg_secondary'],
+        font=dict(color=COLORS['text_secondary'], family="Inter"),
         showlegend=False,
-        margin=dict(l=40, r=40, t=50, b=40),
+        margin=dict(l=50, r=30, t=60, b=50),
         xaxis=dict(
             showgrid=True,
-            gridcolor=PREMIUM_COLORS['chart_grid'],
+            gridcolor='rgba(255,255,255,0.05)',
             showline=False
         ),
         yaxis=dict(
+            title="Number of Deviations",
             showgrid=True,
-            gridcolor=PREMIUM_COLORS['chart_grid'],
-            showline=False,
-            title="Number of Deviations"
+            gridcolor='rgba(255,255,255,0.05)',
+            showline=False
         )
     )
     
     return fig
 
-def create_inventory_status_chart(data):
+def create_inventory_donut(data):
     """Inventory status donut chart"""
+    status_data = data['charts']['inventory_status']['status_breakdown']
     
-    supplies = data['inventory']['critical_supplies']
+    labels = list(status_data.keys())
+    values = list(status_data.values())
+    colors = [COLORS['success'], COLORS['warning'], COLORS['danger']]
     
-    # Categorize by status
-    status_counts = {'Good': 0, 'Low': 0, 'Critical': 0}
-    for supply in supplies:
-        status_counts[supply['status']] += 1
-    
-    labels = list(status_counts.keys())
-    values = list(status_counts.values())
-    colors = [PREMIUM_COLORS['success'], PREMIUM_COLORS['warning'], PREMIUM_COLORS['danger']]
-    
-    fig = go.Figure(data=[go.Pie(
+    fig = go.Figure(go.Pie(
         labels=labels,
         values=values,
-        hole=0.6,
+        hole=0.65,
         marker_colors=colors,
         textinfo='label+percent',
-        textfont=dict(color=PREMIUM_COLORS['text_primary'])
-    )])
+        textfont=dict(color=COLORS['text_primary'], size=12),
+        hovertemplate='<b>%{label}</b><br>Count: %{value}<br>%{percent}<extra></extra>'
+    ))
+    
+    # Add center annotation
+    total_items = sum(values)
+    fig.add_annotation(
+        text=f"Total<br><b style='font-size:20px'>{total_items}</b><br>Items",
+        x=0.5, y=0.5,
+        font=dict(size=14, color=COLORS['text_primary']),
+        showarrow=False
+    )
     
     fig.update_layout(
         title=dict(
-            text="Critical Inventory Status",
-            font=dict(color=PREMIUM_COLORS['text_primary'], size=16),
+            text="Inventory Status Overview",
+            font=dict(color=COLORS['text_primary'], size=18),
             x=0.5
         ),
-        paper_bgcolor=PREMIUM_COLORS['bg_secondary'],
-        font=dict(color=PREMIUM_COLORS['text_secondary']),
+        paper_bgcolor=COLORS['bg_secondary'],
+        font=dict(color=COLORS['text_secondary'], family="Inter"),
+        margin=dict(l=40, r=40, t=60, b=40),
         showlegend=True,
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.1,
+            y=-0.15,
             xanchor="center",
             x=0.5,
-            font=dict(color=PREMIUM_COLORS['text_secondary'])
-        ),
-        margin=dict(l=40, r=40, t=60, b=40)
+            font=dict(color=COLORS['text_secondary'])
+        )
     )
     
     return fig
 
-# Custom CSS styling
+# Premium CSS styling matching reference image
 app.index_string = '''
 <!DOCTYPE html>
 <html>
     <head>
         {%metas%}
-        <title>503B Compliance Manufacturing Dashboard</title>
+        <title>503B Pharmaceutical Manufacturing Dashboard</title>
         {%favicon%}
         {%css%}
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
             
             body {
                 font-family: 'Inter', sans-serif;
-                background: linear-gradient(135deg, #0A0B0D 0%, #1A1D20 100%);
-                margin: 0;
-                padding: 0;
-                color: #FFFFFF;
-            }
-            
-            .main-container {
                 background: #0A0B0D;
-                min-height: 100vh;
-                padding: 20px;
+                color: #FFFFFF;
+                overflow-x: hidden;
             }
             
             .dashboard-header {
                 background: linear-gradient(135deg, #1A1D20 0%, #242831 100%);
-                border-radius: 15px;
                 padding: 25px 35px;
-                margin-bottom: 30px;
-                border: 1px solid rgba(212, 175, 55, 0.1);
+                margin: 20px 20px 30px 300px;
+                border-radius: 15px;
+                border: 1px solid rgba(212, 175, 55, 0.12);
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
             }
             
             .header-title {
-                font-size: 28px;
+                font-size: 32px;
                 font-weight: 700;
                 color: #D4AF37;
                 margin: 0;
-                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+                letter-spacing: -0.5px;
             }
             
             .header-subtitle {
@@ -480,30 +446,123 @@ app.index_string = '''
                 opacity: 0.9;
             }
             
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 280px;
+                height: 100vh;
+                background: linear-gradient(180deg, #1A1D20 0%, #0A0B0D 100%);
+                border-right: 2px solid #D4AF37;
+                padding: 30px 0;
+                z-index: 1000;
+                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+            }
+            
+            .sidebar-logo {
+                text-align: center;
+                padding: 0 25px 30px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                margin-bottom: 30px;
+            }
+            
+            .logo-text {
+                font-size: 24px;
+                font-weight: 800;
+                color: #D4AF37;
+            }
+            
+            .logo-subtitle {
+                font-size: 12px;
+                color: #B8BCC8;
+                margin-top: 4px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            
+            .nav-item {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 14px 25px;
+                color: #B8BCC8;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                border-left: 3px solid transparent;
+                font-weight: 500;
+            }
+            
+            .nav-item:hover {
+                background: rgba(212, 175, 55, 0.1);
+                color: #E8C547;
+                border-left-color: #D4AF37;
+                transform: translateX(6px);
+            }
+            
+            .nav-item.active {
+                background: rgba(212, 175, 55, 0.15);
+                color: #D4AF37;
+                border-left-color: #D4AF37;
+            }
+            
+            .main-content {
+                margin-left: 280px;
+                padding: 20px;
+                min-height: 100vh;
+            }
+            
             .kpi-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                grid-template-columns: repeat(5, 1fr);
                 gap: 20px;
-                margin-bottom: 35px;
+                margin: 0 20px 35px 20px;
             }
             
             .premium-kpi-card {
                 background: linear-gradient(145deg, #1A1D20 0%, #242831 100%);
                 border-radius: 12px;
-                padding: 20px;
+                padding: 24px;
                 border: 1px solid rgba(212, 175, 55, 0.08);
-                box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
                 position: relative;
                 overflow: hidden;
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
+                transition: all 0.3s ease;
             }
             
             .premium-kpi-card:hover {
                 transform: translateY(-4px);
-                box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+                box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+                border-color: rgba(212, 175, 55, 0.2);
             }
             
-            .kpi-accent {
+            .kpi-accent-good {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #4CAF50, #66BB6A);
+            }
+            
+            .kpi-accent-warning {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #FF9800, #FFA726);
+            }
+            
+            .kpi-accent-critical {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #F44336, #E57373);
+            }
+            
+            .kpi-accent-normal {
                 position: absolute;
                 top: 0;
                 left: 0;
@@ -512,48 +571,43 @@ app.index_string = '''
                 background: linear-gradient(90deg, #D4AF37, #E8C547);
             }
             
-            .kpi-accent.warning {
-                background: linear-gradient(90deg, #FF9800, #FFA726);
-            }
-            
-            .kpi-accent.critical {
-                background: linear-gradient(90deg, #F44336, #E57373);
-            }
-            
             .kpi-title {
                 font-size: 12px;
                 font-weight: 600;
                 text-transform: uppercase;
                 color: #B8BCC8;
                 margin: 0 0 12px 0;
-                letter-spacing: 0.5px;
+                letter-spacing: 0.8px;
             }
             
             .kpi-value {
-                font-size: 32px;
+                font-size: 36px;
                 font-weight: 800;
                 color: #FFFFFF;
                 line-height: 1;
             }
             
             .kpi-unit {
-                font-size: 16px;
+                font-size: 18px;
                 font-weight: 400;
                 color: #B8BCC8;
-                margin-left: 4px;
+                margin-left: 6px;
             }
             
             .kpi-change {
-                margin-top: 8px;
-                font-size: 12px;
+                margin-top: 10px;
+                font-size: 13px;
                 font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 4px;
             }
             
             .chart-grid {
                 display: grid;
                 grid-template-columns: repeat(12, 1fr);
                 gap: 20px;
-                margin-bottom: 30px;
+                margin: 0 20px 30px 20px;
             }
             
             .chart-card {
@@ -568,8 +622,8 @@ app.index_string = '''
             }
             
             .chart-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+                transform: translateY(-3px);
+                box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8);
                 border-color: rgba(212, 175, 55, 0.15);
             }
             
@@ -588,98 +642,42 @@ app.index_string = '''
             .chart-third { grid-column: span 4; }
             .chart-quarter { grid-column: span 3; }
             
-            .sidebar {
-                position: fixed;
-                left: 0;
-                top: 0;
-                width: 280px;
-                height: 100vh;
-                background: linear-gradient(180deg, #1A1D20 0%, #0A0B0D 100%);
-                border-right: 1px solid rgba(212, 175, 55, 0.1);
-                padding: 25px 0;
-                z-index: 1000;
-                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
-            }
-            
-            .sidebar-logo {
-                padding: 0 25px 25px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-                margin-bottom: 25px;
-            }
-            
-            .logo-text {
-                font-size: 24px;
-                font-weight: 700;
-                color: #D4AF37;
-                text-align: center;
-            }
-            
-            .nav-item {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 12px 25px;
-                color: #B8BCC8;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                border-left: 3px solid transparent;
-            }
-            
-            .nav-item:hover {
-                background-color: rgba(212, 175, 55, 0.08);
-                color: #E8C547;
-                border-left-color: #D4AF37;
-            }
-            
-            .nav-item.active {
-                background-color: rgba(212, 175, 55, 0.12);
-                color: #D4AF37;
-                border-left-color: #D4AF37;
-            }
-            
-            .content-wrapper {
-                margin-left: 280px;
-                padding: 20px;
-            }
-            
             .status-bar {
                 text-align: center;
-                padding: 15px;
-                background: rgba(212, 175, 55, 0.05);
-                border-radius: 8px;
-                margin-top: 20px;
+                padding: 18px;
+                background: rgba(212, 175, 55, 0.08);
+                border-radius: 10px;
+                margin: 0 20px 20px 20px;
+                border: 1px solid rgba(212, 175, 55, 0.15);
             }
             
-            @media (max-width: 1200px) {
+            @media (max-width: 1400px) {
+                .kpi-grid {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+            
+            @media (max-width: 900px) {
                 .sidebar {
                     transform: translateX(-100%);
                 }
                 
-                .content-wrapper {
+                .main-content {
                     margin-left: 0;
                 }
                 
-                .chart-grid {
-                    grid-template-columns: repeat(6, 1fr);
+                .dashboard-header {
+                    margin: 20px;
                 }
                 
-                .chart-half { grid-column: span 6; }
-                .chart-third { grid-column: span 6; }
-            }
-            
-            @media (max-width: 768px) {
                 .chart-grid {
                     grid-template-columns: 1fr;
-                    gap: 15px;
-                }
-                
-                .chart-card {
-                    padding: 20px;
+                    margin: 0 15px;
                 }
                 
                 .kpi-grid {
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: 15px;
+                    grid-template-columns: repeat(2, 1fr);
+                    margin: 0 15px 25px;
                 }
             }
         </style>
@@ -695,53 +693,53 @@ app.index_string = '''
 </html>
 '''
 
-# Main layout
+# Main layout with premium 503B design
 app.layout = html.Div([
-    # Sidebar
+    # Premium Sidebar
     html.Div([
         html.Div([
-            html.Div("503B Compliance", className="logo-text")
+            html.Div("503B Dashboard", className="logo-text"),
+            html.Div("Pharmaceutical Compliance", className="logo-subtitle")
         ], className="sidebar-logo"),
         
         html.Div([
             html.Div(["📊", " Overview"], className="nav-item active"),
             html.Div(["🏭", " Production"], className="nav-item"),
-            html.Div(["🔬", " Quality Control"], className="nav-item"),
+            html.Div(["🔬", " Quality Control"], className="nav-item"), 
             html.Div(["📋", " Compliance"], className="nav-item"),
             html.Div(["📦", " Inventory"], className="nav-item"),
             html.Div(["🌡️", " Environmental"], className="nav-item"),
             html.Div(["👥", " Personnel"], className="nav-item"),
-            html.Div(["📈", " Reports"], className="nav-item"),
-            html.Div(["⚙️", " Settings"], className="nav-item")
+            html.Div(["📈", " Analytics"], className="nav-item")
         ])
     ], className="sidebar"),
     
-    # Main content
+    # Main dashboard content
     html.Div([
-        # Header
+        # Premium header
         html.Div([
             html.H1("503B Pharmaceutical Manufacturing Dashboard", className="header-title"),
-            html.P(f"Real-time Compliance Monitoring • Last Updated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", 
+            html.P(f"Real-time Compliance Monitoring • Connected to Master Sheet • Last Sync: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", 
                    className="header-subtitle")
         ], className="dashboard-header"),
         
-        # KPI Row
-        html.Div(id="kpi-row", className="kpi-grid"),
+        # Executive KPI Row
+        html.Div(id="executive-kpis", className="kpi-grid"),
         
-        # Charts Grid
+        # Premium Charts Grid
         html.Div([
-            # Production trends (large)
+            # Production trends (large chart)
             html.Div([
                 dcc.Graph(
-                    id='production-chart',
+                    id='production-trends-chart',
                     config={'displayModeBar': False, 'responsive': True}
                 )
             ], className="chart-card chart-half"),
             
-            # Quality radar
+            # Quality parameters radar
             html.Div([
                 dcc.Graph(
-                    id='quality-radar',
+                    id='quality-radar-chart',
                     config={'displayModeBar': False, 'responsive': True}
                 )
             ], className="chart-card chart-half"),
@@ -749,15 +747,15 @@ app.layout = html.Div([
             # Environmental monitoring
             html.Div([
                 dcc.Graph(
-                    id='environmental-chart',
+                    id='environmental-monitoring-chart',
                     config={'displayModeBar': False, 'responsive': True}
                 )
             ], className="chart-card chart-half"),
             
-            # Deviation trends
+            # Deviation analysis
             html.Div([
                 dcc.Graph(
-                    id='deviation-chart',
+                    id='deviation-analysis-chart',
                     config={'displayModeBar': False, 'responsive': True}
                 )
             ], className="chart-card chart-third"),
@@ -765,74 +763,86 @@ app.layout = html.Div([
             # Inventory status
             html.Div([
                 dcc.Graph(
-                    id='inventory-chart',
+                    id='inventory-status-chart',
                     config={'displayModeBar': False, 'responsive': True}
                 )
             ], className="chart-card chart-third")
             
         ], className="chart-grid"),
         
-        # Auto-refresh
+        # Auto-refresh every 5 minutes
         dcc.Interval(
-            id='interval-component',
+            id='data-refresh-interval',
             interval=300000,  # 5 minutes
             n_intervals=0
         ),
         
-        # Status bar
-        html.Div(id='status-indicator', className="status-bar")
+        # Status indicator
+        html.Div(id='system-status', className="status-bar")
         
-    ], className="content-wrapper")
-], className="main-container")
+    ], className="main-content")
+])
 
-# Callbacks
+# Main callback for live data updates
 @app.callback(
-    [Output('kpi-row', 'children'),
-     Output('production-chart', 'figure'),
-     Output('quality-radar', 'figure'),
-     Output('environmental-chart', 'figure'),
-     Output('deviation-chart', 'figure'),
-     Output('inventory-chart', 'figure'),
-     Output('status-indicator', 'children')],
-    [Input('interval-component', 'n_intervals')]
+    [Output('executive-kpis', 'children'),
+     Output('production-trends-chart', 'figure'),
+     Output('quality-radar-chart', 'figure'), 
+     Output('environmental-monitoring-chart', 'figure'),
+     Output('deviation-analysis-chart', 'figure'),
+     Output('inventory-status-chart', 'figure'),
+     Output('system-status', 'children')],
+    [Input('data-refresh-interval', 'n_intervals')]
 )
-def update_dashboard(n_intervals):
-    """Update all dashboard components with fresh data"""
+def update_503b_dashboard(n_intervals):
+    """Update dashboard with live data from your master sheet"""
     
-    # Fetch fresh data from Google Sheets
-    data = get_503b_data()
+    # Get fresh data from your master sheet
+    live_data = get_live_data()
     
-    # Create KPI cards
+    # Create executive KPI cards
     kpi_cards = [
-        create_premium_kpi_card("Total Batches", data['production']['total_batches'], 8.3),
-        create_premium_kpi_card("Quality Pass Rate", data['quality']['pass_rate'], 2.1, "%", "good"),
-        create_premium_kpi_card("Compliance Score", data['compliance']['audit_score'], -1.2, "%", "warning"),
-        create_premium_kpi_card("Active Deviations", data['compliance']['deviations']['total'], -25.0, "", "critical"),
-        create_premium_kpi_card("Inventory Items", data['inventory']['raw_materials'], 5.7)
+        create_kpi_card("Total Batches", live_data['kpis']['total_batches']['value'], 
+                       live_data['kpis']['total_batches']['change'], "", live_data['kpis']['total_batches']['status']),
+        create_kpi_card("Quality Pass Rate", live_data['kpis']['quality_pass_rate']['value'], 
+                       live_data['kpis']['quality_pass_rate']['change'], "%", live_data['kpis']['quality_pass_rate']['status']),
+        create_kpi_card("Compliance Score", live_data['kpis']['compliance_score']['value'], 
+                       live_data['kpis']['compliance_score']['change'], "%", live_data['kpis']['compliance_score']['status']),
+        create_kpi_card("Active Deviations", live_data['kpis']['active_deviations']['value'], 
+                       live_data['kpis']['active_deviations']['change'], "", live_data['kpis']['active_deviations']['status']),
+        create_kpi_card("Inventory Alerts", live_data['kpis']['inventory_alerts']['value'], 
+                       live_data['kpis']['inventory_alerts']['change'], "", live_data['kpis']['inventory_alerts']['status'])
     ]
     
-    # Status indicator
+    # Status indicator with live sync info
     current_time = datetime.now().strftime('%I:%M %p')
-    status = html.Div([
-        html.Span("🟢 ", style={'color': PREMIUM_COLORS['success']}),
-        html.Span(f"System Online • Data synced at {current_time}", 
-                 style={'color': PREMIUM_COLORS['text_secondary']})
+    sync_status = "🟢 Live Sync Active" if master_connector and master_connector.client else "🟡 Using Cached Data"
+    
+    status_indicator = html.Div([
+        html.Span(sync_status, style={'color': COLORS['success'] if 'Live' in sync_status else COLORS['warning']}),
+        html.Span(f" • Master Sheet Connected • Last Update: {current_time}", 
+                 style={'color': COLORS['text_secondary'], 'margin-left': '10px'})
     ])
     
     return (
         kpi_cards,
-        create_batch_production_chart(data),
-        create_quality_radar_chart(data),
-        create_environmental_monitoring_chart(data),
-        create_deviation_trend_chart(data),
-        create_inventory_status_chart(data),
-        status
+        create_production_chart(live_data),
+        create_quality_radar(live_data),
+        create_environmental_gauges(live_data),
+        create_deviation_trend(live_data),
+        create_inventory_donut(live_data),
+        status_indicator
     )
 
-# Health check endpoint
+# Health check for monitoring
 @app.server.route('/health')
 def health_check():
-    return {'status': 'healthy', 'service': '503B Compliance Dashboard', 'timestamp': datetime.now().isoformat()}
+    return {
+        'status': 'healthy', 
+        'service': '503B Compliance Dashboard',
+        'sheet_connection': master_connector.client is not None if master_connector else False,
+        'timestamp': datetime.now().isoformat()
+    }
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8050))
