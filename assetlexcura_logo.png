@@ -1,0 +1,28 @@
+# LexCura Logo Setup
+
+## Logo File Required
+
+Create a folder `assets/` in your project root and add your LexCura logo as:
+`assets/lexcura_logo.png`
+
+**Logo specifications:**
+- Format: PNG with transparent background
+- Size: 200x60px (or similar aspect ratio)  
+- Style: Should work on dark backgrounds
+- Colors: Gold/white preferred to match dashboard theme
+
+## If you don't have a logo yet:
+
+1. **Quick solution**: Create a simple text logo using any graphics tool
+2. **Text alternative**: The dashboard will show "LexCura" text if image fails to load
+3. **Professional option**: Use Canva or similar to create a branded logo
+
+## File structure:
+```
+lexcura-dashboard/
+├── app.py
+├── assets/
+│   └── lexcura_logo.png  (your logo here)
+├── requirements.txt
+└── ...
+```
