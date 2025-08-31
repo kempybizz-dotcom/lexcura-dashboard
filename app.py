@@ -1,7 +1,6 @@
 import dash
 from dash import dcc, html, Input, Output, callback
 import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime, timedelta
 import random
 import math
