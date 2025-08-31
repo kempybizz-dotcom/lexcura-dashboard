@@ -3,8 +3,8 @@ from dash import dcc, html, Input, Output, callback
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta
-import pandas as pd
-import numpy as np
+import random
+import math
 import os
 
 # Initialize the Dash app
@@ -23,89 +23,104 @@ COLORS = {
     'warning_orange': '#F4A261'
 }
 
-# Generate sample data with proper error handling
+# Generate sample data using pure Python (no pandas/numpy)
 def generate_sample_data():
     try:
         # Set random seed for consistent data
-        np.random.seed(42)
+        random.seed(42)
         
         # 1. Financial Impact data
-        financial_data = pd.DataFrame({
-            'Category': ['Revenue', 'Operating Costs', 'Net Profit', 'Investments', 'Returns'],
-            'Current': [2850000, -1320000, 1530000, -480000, 720000],
-            'Previous': [2600000, -1450000, 1150000, -520000, 580000]
-        })
+        financial_data = {
+            'categories': ['Revenue', 'Operating Costs', 'Net Profit', 'Investments', 'Returns'],
+            'current': [2850000, -1320000, 1530000, -480000, 720000],
+            'previous': [2600000, -1450000, 1150000, -520000, 580000]
+        }
         
         # 2. Deadline Tracker data
-        deadline_data = pd.DataFrame({
-            'Task': ['Q4 Financial Report', 'System Infrastructure Upgrade', 'Compliance Audit Review', 'Annual Budget Planning', 'Security Assessment'],
-            'Days_Left': [3, 15, 1, 12, 8],
-            'Progress': [85, 45, 95, 60, 70]
-        })
+        deadline_data = {
+            'tasks': ['Q4 Financial Report', 'System Infrastructure Upgrade', 'Compliance Audit Review', 'Annual Budget Planning', 'Security Assessment'],
+            'days_left': [3, 15, 1, 12, 8],
+            'progress': [85, 45, 95, 60, 70]
+        }
         # Add urgency status based on days left
-        deadline_data['Urgency'] = deadline_data['Days_Left'].apply(
-            lambda x: 'Critical' if x <= 3 else 'Warning' if x <= 7 else 'Normal'
-        )
+        deadline_data['urgency'] = ['Critical' if d <= 3 else 'Warning' if d <= 7 else 'Normal' for d in deadline_data['days_left']]
         
         # 3. Alert Severity data
-        alert_data = pd.DataFrame({
-            'Severity': ['Critical', 'Warning', 'Info'],
-            'Count': [8, 24, 42]
-        })
+        alert_data = {
+            'severity': ['Critical', 'Warning', 'Info'],
+            'count': [8, 24, 42]
+        }
         
-        # 4. Historical Trends data (last 12 months)
+        # 4. Historical Trends data (last 365 days)
         end_date = datetime.now()
         start_date = end_date - timedelta(days=365)
-        date_range = pd.date_range(start=start_date, end=end_date, freq='D')
+        
+        # Generate dates
+        historical_dates = []
+        current_date = start_date
+        while current_date <= end_date:
+            historical_dates.append(current_date)
+            current_date += timedelta(days=1)
         
         # Generate realistic trending data
         base_value = 1000
-        trend = np.linspace(0, 200, len(date_range))
-        noise = np.random.normal(0, 50, len(date_range))
-        seasonal = 100 * np.sin(2 * np.pi * np.arange(len(date_range)) / 365)
+        historical_performance = []
+        for i, date in enumerate(historical_dates):
+            # Add trend, seasonality, and noise
+            trend = (i / len(historical_dates)) * 200
+            seasonal = 100 * math.sin(2 * math.pi * i / 365)
+            noise = random.uniform(-50, 50)
+            value = base_value + trend + seasonal + noise
+            historical_performance.append(value)
         
-        historical_data = pd.DataFrame({
-            'Date': date_range,
-            'Performance': base_value + trend + seasonal + noise,
-            'Target': 1200
-        })
+        historical_data = {
+            'dates': historical_dates,
+            'performance': historical_performance,
+            'target': 1200
+        }
         
         # 5. Growth vs Decline data
-        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
-        growth_data = pd.DataFrame({
-            'Month': months,
-            'Growth_Rate': [12, 18, 15, 22, 28, 25, 30, 35],
-            'Decline_Rate': [5, 8, 4, 6, 9, 7, 8, 6]
-        })
+        growth_data = {
+            'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+            'growth_rate': [12, 18, 15, 22, 28, 25, 30, 35],
+            'decline_rate': [5, 8, 4, 6, 9, 7, 8, 6]
+        }
         
         # 6. Performance KPIs data
-        kpis = ['Operational Efficiency', 'Quality Score', 'Response Time', 'Cost Optimization', 'Customer Satisfaction']
-        performance_data = pd.DataFrame({
-            'KPI': kpis,
-            'Current_Score': [85, 92, 78, 88, 91],
-            'Target_Score': [90, 95, 85, 90, 95],
-            'Industry_Avg': [75, 85, 80, 82, 87]
-        })
+        performance_data = {
+            'kpis': ['Operational Efficiency', 'Quality Score', 'Response Time', 'Cost Optimization', 'Customer Satisfaction'],
+            'current_score': [85, 92, 78, 88, 91],
+            'target_score': [90, 95, 85, 90, 95],
+            'industry_avg': [75, 85, 80, 82, 87]
+        }
         
         # 7. Risk score (single value for gauge)
         risk_score = 68  # Out of 100 (lower is better)
         
-        # 8. Projection & Forecast data
-        future_months = pd.date_range(start=datetime.now(), periods=12, freq='M')
+        # 8. Projection & Forecast data (next 12 months)
+        future_dates = []
+        current_month = datetime.now().replace(day=1)
+        for i in range(12):
+            future_dates.append(current_month + timedelta(days=32*i))
+        
         base_forecast = 1500
         growth_rate = 0.05
-        
         forecast_values = []
-        for i, month in enumerate(future_months):
-            base = base_forecast * (1 + growth_rate) ** i
-            forecast_values.append(base)
+        lower_confidence = []
+        upper_confidence = []
         
-        projection_data = pd.DataFrame({
-            'Month': future_months,
-            'Forecast': forecast_values,
-            'Lower_Confidence': [f * 0.85 for f in forecast_values],
-            'Upper_Confidence': [f * 1.15 for f in forecast_values]
-        })
+        for i in range(12):
+            forecast = base_forecast * (1 + growth_rate) ** i
+            forecast_values.append(forecast)
+            lower_confidence.append(forecast * 0.85)
+            upper_confidence.append(forecast * 1.15)
+        
+        projection_data = {
+            'dates': future_dates,
+            'forecast': forecast_values,
+            'lower_confidence': lower_confidence,
+            'upper_confidence': upper_confidence
+        }
         
         return {
             'financial': financial_data,
@@ -122,14 +137,14 @@ def generate_sample_data():
         print(f"Error generating sample data: {str(e)}")
         # Return minimal fallback data
         return {
-            'financial': pd.DataFrame({'Category': ['Revenue'], 'Current': [1000000], 'Previous': [900000]}),
-            'deadlines': pd.DataFrame({'Task': ['Sample Task'], 'Days_Left': [5], 'Progress': [50], 'Urgency': ['Normal']}),
-            'alerts': pd.DataFrame({'Severity': ['Info'], 'Count': [10]}),
-            'historical': pd.DataFrame({'Date': [datetime.now()], 'Performance': [1000], 'Target': [1200]}),
-            'growth': pd.DataFrame({'Month': ['Jan'], 'Growth_Rate': [15], 'Decline_Rate': [5]}),
-            'performance': pd.DataFrame({'KPI': ['Performance'], 'Current_Score': [80], 'Target_Score': [90], 'Industry_Avg': [75]}),
+            'financial': {'categories': ['Revenue'], 'current': [1000000], 'previous': [900000]},
+            'deadlines': {'tasks': ['Sample Task'], 'days_left': [5], 'progress': [50], 'urgency': ['Normal']},
+            'alerts': {'severity': ['Info'], 'count': [10]},
+            'historical': {'dates': [datetime.now()], 'performance': [1000], 'target': 1200},
+            'growth': {'months': ['Jan'], 'growth_rate': [15], 'decline_rate': [5]},
+            'performance': {'kpis': ['Performance'], 'current_score': [80], 'target_score': [90], 'industry_avg': [75]},
             'risk_score': 70,
-            'projections': pd.DataFrame({'Month': [datetime.now()], 'Forecast': [1500], 'Lower_Confidence': [1400], 'Upper_Confidence': [1600]})
+            'projections': {'dates': [datetime.now()], 'forecast': [1500], 'lower_confidence': [1400], 'upper_confidence': [1600]}
         }
 
 # Initialize data
@@ -165,21 +180,22 @@ def create_financial_chart():
         fig = go.Figure()
         
         # Current period bars
+        colors_current = [COLORS['success_green'] if x > 0 else COLORS['danger_red'] for x in data['financial']['current']]
+        
         fig.add_trace(go.Bar(
-            x=data['financial']['Category'],
-            y=data['financial']['Current'],
+            x=data['financial']['categories'],
+            y=data['financial']['current'],
             name='Current Period',
-            marker_color=[COLORS['success_green'] if x > 0 else COLORS['danger_red'] 
-                         for x in data['financial']['Current']],
+            marker_color=colors_current,
             hovertemplate='<b>%{x}</b><br>Current: $%{y:,.0f}<br><extra></extra>',
-            text=[f"${x:,.0f}" for x in data['financial']['Current']],
+            text=[f"${x:,.0f}" for x in data['financial']['current']],
             textposition='outside'
         ))
         
         # Previous period bars
         fig.add_trace(go.Bar(
-            x=data['financial']['Category'],
-            y=data['financial']['Previous'],
+            x=data['financial']['categories'],
+            y=data['financial']['previous'],
             name='Previous Period',
             marker_color=COLORS['gold_primary'],
             opacity=0.7,
@@ -207,14 +223,16 @@ def create_deadline_chart():
         
         fig = go.Figure()
         
+        colors = [urgency_colors[urgency] for urgency in data['deadlines']['urgency']]
+        
         fig.add_trace(go.Bar(
-            x=data['deadlines']['Days_Left'],
-            y=data['deadlines']['Task'],
+            x=data['deadlines']['days_left'],
+            y=data['deadlines']['tasks'],
             orientation='h',
-            marker_color=[urgency_colors[urgency] for urgency in data['deadlines']['Urgency']],
+            marker_color=colors,
             hovertemplate='<b>%{y}</b><br>Days Remaining: %{x}<br>Progress: %{customdata}%<br><extra></extra>',
-            customdata=data['deadlines']['Progress'],
-            text=[f"{days}d" for days in data['deadlines']['Days_Left']],
+            customdata=data['deadlines']['progress'],
+            text=[f"{days}d" for days in data['deadlines']['days_left']],
             textposition='middle right'
         ))
         
@@ -234,8 +252,8 @@ def create_alert_chart():
         severity_colors = [COLORS['danger_red'], COLORS['warning_orange'], COLORS['success_green']]
         
         fig = go.Figure(go.Pie(
-            labels=data['alerts']['Severity'],
-            values=data['alerts']['Count'],
+            labels=data['alerts']['severity'],
+            values=data['alerts']['count'],
             hole=0.6,
             marker_colors=severity_colors,
             hovertemplate='<b>%{label} Alerts</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>',
@@ -244,7 +262,7 @@ def create_alert_chart():
         ))
         
         # Add center annotation
-        total_alerts = data['alerts']['Count'].sum()
+        total_alerts = sum(data['alerts']['count'])
         fig.add_annotation(
             text=f"Total<br><b>{total_alerts}</b><br>Alerts",
             x=0.5, y=0.5,
@@ -268,8 +286,8 @@ def create_historical_chart():
         
         # Performance area chart
         fig.add_trace(go.Scatter(
-            x=data['historical']['Date'],
-            y=data['historical']['Performance'],
+            x=data['historical']['dates'],
+            y=data['historical']['performance'],
             mode='lines',
             line={'color': COLORS['gold_primary'], 'width': 3},
             fill='tonexty',
@@ -280,7 +298,7 @@ def create_historical_chart():
         
         # Target line
         fig.add_hline(
-            y=data['historical']['Target'].iloc[0],
+            y=data['historical']['target'],
             line_dash="dash",
             line_color=COLORS['success_green'],
             line_width=2,
@@ -305,23 +323,24 @@ def create_growth_chart():
         
         # Growth bars
         fig.add_trace(go.Bar(
-            x=data['growth']['Month'],
-            y=data['growth']['Growth_Rate'],
+            x=data['growth']['months'],
+            y=data['growth']['growth_rate'],
             name='Growth Rate',
             marker_color=COLORS['success_green'],
             hovertemplate='<b>%{x}</b><br>Growth: +%{y}%<extra></extra>',
-            text=[f"+{rate}%" for rate in data['growth']['Growth_Rate']],
+            text=[f"+{rate}%" for rate in data['growth']['growth_rate']],
             textposition='outside'
         ))
         
         # Decline bars (negative values)
+        decline_negative = [-rate for rate in data['growth']['decline_rate']]
         fig.add_trace(go.Bar(
-            x=data['growth']['Month'],
-            y=[-rate for rate in data['growth']['Decline_Rate']],
+            x=data['growth']['months'],
+            y=decline_negative,
             name='Decline Rate',
             marker_color=COLORS['danger_red'],
             hovertemplate='<b>%{x}</b><br>Decline: %{y}%<extra></extra>',
-            text=[f"-{rate}%" for rate in data['growth']['Decline_Rate']],
+            text=[f"-{rate}%" for rate in data['growth']['decline_rate']],
             textposition='outside'
         ))
         
@@ -343,8 +362,8 @@ def create_performance_chart():
         
         # Current performance
         fig.add_trace(go.Scatterpolar(
-            r=data['performance']['Current_Score'],
-            theta=data['performance']['KPI'],
+            r=data['performance']['current_score'],
+            theta=data['performance']['kpis'],
             fill='toself',
             name='Current Performance',
             line_color=COLORS['gold_primary'],
@@ -354,8 +373,8 @@ def create_performance_chart():
         
         # Target performance
         fig.add_trace(go.Scatterpolar(
-            r=data['performance']['Target_Score'],
-            theta=data['performance']['KPI'],
+            r=data['performance']['target_score'],
+            theta=data['performance']['kpis'],
             fill='toself',
             name='Target',
             line_color=COLORS['success_green'],
@@ -365,8 +384,8 @@ def create_performance_chart():
         
         # Industry average
         fig.add_trace(go.Scatterpolar(
-            r=data['performance']['Industry_Avg'],
-            theta=data['performance']['KPI'],
+            r=data['performance']['industry_avg'],
+            theta=data['performance']['kpis'],
             mode='lines',
             name='Industry Average',
             line_color=COLORS['neutral_text'],
@@ -453,8 +472,8 @@ def create_projection_chart():
         
         # Upper confidence bound (invisible, for fill)
         fig.add_trace(go.Scatter(
-            x=data['projections']['Month'],
-            y=data['projections']['Upper_Confidence'],
+            x=data['projections']['dates'],
+            y=data['projections']['upper_confidence'],
             mode='lines',
             line={'width': 0},
             showlegend=False,
@@ -464,21 +483,21 @@ def create_projection_chart():
         
         # Lower confidence bound with fill
         fig.add_trace(go.Scatter(
-            x=data['projections']['Month'],
-            y=data['projections']['Lower_Confidence'],
+            x=data['projections']['dates'],
+            y=data['projections']['lower_confidence'],
             mode='lines',
             line={'width': 0},
             fill='tonexty',
             fillcolor='rgba(212, 175, 55, 0.2)',
             name='Confidence Interval',
-            hovertemplate='<b>%{x|%Y-%m}</b><br>Range: %{y:,.0f} - %{customdata:,.0f}<extra></extra>',
-            customdata=data['projections']['Upper_Confidence']
+            hovertemplate='<b>%{x|%Y-%m}</b><br>Range: $%{y:,.0f} - $%{customdata:,.0f}<extra></extra>',
+            customdata=data['projections']['upper_confidence']
         ))
         
         # Main forecast line
         fig.add_trace(go.Scatter(
-            x=data['projections']['Month'],
-            y=data['projections']['Forecast'],
+            x=data['projections']['dates'],
+            y=data['projections']['forecast'],
             mode='lines+markers',
             line={'color': COLORS['gold_primary'], 'width': 4},
             marker={'size': 8, 'color': COLORS['highlight_gold']},
@@ -668,15 +687,6 @@ app.index_string = '''
                 }
             }
             
-            /* Loading animation */
-            .loading {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 200px;
-                color: #D4AF37;
-            }
-            
             /* Scrollbar styling */
             ::-webkit-scrollbar {
                 width: 8px;
@@ -713,11 +723,11 @@ app.layout = html.Div([
     html.Div([
         html.Div("LexCura Dashboard", className="logo"),
         html.Div([
-            html.Div("📊 Overview", className="nav-item"),
-            html.Div("📈 Analytics", className="nav-item"),
-            html.Div("📋 Reports", className="nav-item"),
-            html.Div("⚙️ Settings", className="nav-item"),
-            html.Div("🔒 Security", className="nav-item"),
+            html.Div("Overview", className="nav-item"),
+            html.Div("Analytics", className="nav-item"),
+            html.Div("Reports", className="nav-item"),
+            html.Div("Settings", className="nav-item"),
+            html.Div("Security", className="nav-item"),
         ])
     ], className="sidebar"),
     
@@ -851,7 +861,16 @@ def update_dashboard_charts(n_intervals):
     try:
         # Regenerate data with slight variations for realistic updates
         global data
-        data = generate_sample_data()
+        
+        # Add small random variations to existing data
+        if n_intervals > 0:
+            # Vary financial data slightly
+            for i in range(len(data['financial']['current'])):
+                variation = random.uniform(-0.05, 0.05)  # ±5% variation
+                data['financial']['current'][i] = int(data['financial']['current'][i] * (1 + variation))
+            
+            # Vary risk score slightly
+            data['risk_score'] = max(0, min(100, data['risk_score'] + random.uniform(-3, 3)))
         
         # Create status indicator
         current_time = datetime.now().strftime('%I:%M %p')
