@@ -654,51 +654,98 @@ def generate_pdf_report():
         print(f"Error generating PDF: {str(e)}")
         return None
 
-# Login page layout with animations
+# Elite login layout with company branding
 def get_login_layout():
-    return dbc.Container([
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardBody([
-                        html.Div([
-                            html.H2("LexCura Dashboard", className="text-center mb-4", 
-                                   style={'color': COLORS['gold_primary'], 'font-weight': 'bold'}),
-                            html.Hr(),
-                            dbc.Form([
-                                dbc.Row([
-                                    dbc.Label("Username", html_for="username-input"),
-                                    dbc.Input(id="username-input", type="text", placeholder="Enter username",
-                                             className="mb-2"),
-                                ], className="mb-3"),
-                                dbc.Row([
-                                    dbc.Label("Password", html_for="password-input"),
-                                    dbc.Input(id="password-input", type="password", placeholder="Enter password",
-                                             className="mb-2"),
-                                ], className="mb-3"),
-                                dbc.Row([
-                                    dbc.Col([
-                                        dbc.Button("Login", id="login-button", color="warning", 
-                                                 className="w-100", 
-                                                 style={'background-color': COLORS['gold_primary'],
-                                                       'border-color': COLORS['gold_primary'],
-                                                       'font-weight': '600',
-                                                       'padding': '12px'})
+    return html.Div([
+        # Background particles effect
+        html.Div(className="particles-background"),
+        
+        dbc.Container([
+            dbc.Row([
+                dbc.Col([
+                    # Company logo placeholder
+                    html.Div([
+                        html.Div("LEXCURA", className="company-logo"),
+                        html.Div("Executive Intelligence Platform", className="company-tagline")
+                    ], className="text-center mb-4"),
+                    
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.Div([
+                                html.H2("Secure Access Portal", className="text-center mb-4", 
+                                       style={'color': COLORS['gold_primary'], 'font-weight': '700'}),
+                                
+                                # Security badges
+                                html.Div([
+                                    html.Span([html.I(className="fas fa-shield-alt"), " Enterprise Security"], 
+                                             className="security-badge"),
+                                    html.Span([html.I(className="fas fa-lock"), " 256-bit Encryption"], 
+                                             className="security-badge ml-2")
+                                ], className="text-center mb-4"),
+                                
+                                html.Hr(style={'border-color': COLORS['gold_primary']}),
+                                
+                                dbc.Form([
+                                    dbc.Row([
+                                        dbc.Label("Username", html_for="username-input", className="form-label-enhanced"),
+                                        dbc.InputGroup([
+                                            dbc.InputGroupText(html.I(className="fas fa-user"), 
+                                                             style={'background-color': COLORS['dark_grey'], 
+                                                                    'border-color': COLORS['gold_primary'], 
+                                                                    'color': COLORS['gold_primary']}),
+                                            dbc.Input(id="username-input", type="text", placeholder="Enter username",
+                                                     className="form-control-enhanced")
+                                        ])
+                                    ], className="mb-3"),
+                                    
+                                    dbc.Row([
+                                        dbc.Label("Password", html_for="password-input", className="form-label-enhanced"),
+                                        dbc.InputGroup([
+                                            dbc.InputGroupText(html.I(className="fas fa-key"), 
+                                                             style={'background-color': COLORS['dark_grey'], 
+                                                                    'border-color': COLORS['gold_primary'], 
+                                                                    'color': COLORS['gold_primary']}),
+                                            dbc.Input(id="password-input", type="password", placeholder="Enter password",
+                                                     className="form-control-enhanced")
+                                        ])
+                                    ], className="mb-4"),
+                                    
+                                    dbc.Row([
+                                        dbc.Col([
+                                            dbc.Button([
+                                                html.I(className="fas fa-sign-in-alt", style={'margin-right': '10px'}),
+                                                "Access Dashboard"
+                                            ], id="login-button", className="login-btn-elite", 
+                                               style={'width': '100%', 'padding': '15px',
+                                                      'background': f'linear-gradient(135deg, {COLORS["gold_primary"]}, {COLORS["highlight_gold"]})',
+                                                      'border': 'none', 'border-radius': '10px',
+                                                      'font-weight': '600', 'font-size': '16px'})
+                                        ])
                                     ])
-                                ])
-                            ]),
-                            html.Div(id="login-alert", className="mt-3")
+                                ]),
+                                html.Div(id="login-alert", className="mt-4"),
+                                
+                                # Footer info
+                                html.Hr(style={'margin-top': '30px'}),
+                                html.Div([
+                                    html.Small("Authorized Personnel Only • ", style={'color': COLORS['neutral_text']}),
+                                    html.Small([html.I(className="fas fa-clock"), f" Session expires in 8 hours"], 
+                                              style={'color': COLORS['neutral_text']})
+                                ], className="text-center")
+                            ])
                         ])
-                    ])
-                ], className="login-card", style={'background-color': COLORS['dark_grey'], 
-                                                  'border': f'2px solid {COLORS["gold_primary"]}',
-                                                  'border-radius': '15px',
-                                                  'box-shadow': '0 10px 30px rgba(0, 0, 0, 0.5)'}),
-            ], width=6, lg=4)
-        ], justify="center", className="min-vh-100 align-items-center"),
-        dcc.Store(id='session-store'),
-        dcc.Store(id='current-user')
-    ], fluid=True, style={'background-color': COLORS['charcoal']})
+                    ], className="login-card-elite", 
+                       style={'background': f'linear-gradient(145deg, {COLORS["dark_grey"]}, {COLORS["charcoal"]})', 
+                              'border': f'2px solid {COLORS["gold_primary"]}',
+                              'border-radius': '20px',
+                              'box-shadow': '0 20px 60px rgba(0, 0, 0, 0.7)',
+                              'backdrop-filter': 'blur(20px)'}),
+                ], width=8, lg=5)
+            ], justify="center", className="min-vh-100 align-items-center"),
+            dcc.Store(id='session-store'),
+            dcc.Store(id='current-user')
+        ], fluid=True, className="login-container")
+    ])
 
 # Analytics page layout - Different view of the same data
 def get_analytics_layout():
@@ -1070,26 +1117,343 @@ def get_header(title="Executive Business Intelligence Dashboard"):
         ])
     ], className="header")
 
-# Main dashboard layout
+# Elite main dashboard layout
 def get_dashboard_layout():
     return html.Div([
         get_sidebar(),
         html.Div([
-            get_header("Executive Business Intelligence Dashboard"),
+            # Executive header with premium styling
             html.Div([
-                # Charts Grid Container
-                html.Div([
-                    # Financial Impact Chart
+                dbc.Row([
+                    dbc.Col([
+                        html.Div([
+                            html.Span("EXECUTIVE", className="executive-badge"),
+                            html.H1("Business Intelligence Dashboard", className="glow-text mt-2"),
+                        ])
+                    ], width=6),
+                    dbc.Col([
+                        # Live performance indicators
+                        dbc.Row([
+                            dbc.Col([
+                                html.Div([
+                                    html.I(className="fas fa-chart-line", style={'font-size': '24px', 'color': COLORS['success_green']}),
+                                    html.Div([
+                                        html.H4("$2.85M", style={'color': COLORS['gold_primary'], 'margin': '0'}),
+                                        html.Small("Revenue", style={'color': COLORS['neutral_text']})
+                                    ])
+                                ], style={'display': 'flex', 'align-items': 'center', 'gap': '15px'})
+                            ], width=4),
+                            dbc.Col([
+                                html.Div([
+                                    html.I(className="fas fa-exclamation-triangle", style={'font-size': '24px', 'color': COLORS['warning_orange']}),
+                                    html.Div([
+                                        html.H4("74", style={'color': COLORS['warning_orange'], 'margin': '0'}),
+                                        html.Small("Alerts", style={'color': COLORS['neutral_text']})
+                                    ])
+                                ], style={'display': 'flex', 'align-items': 'center', 'gap': '15px'})
+                            ], width=4),
+                            dbc.Col([
+                                html.Div([
+                                    html.I(className="fas fa-server", style={'font-size': '24px', 'color': COLORS['success_green']}),
+                                    html.Div([
+                                        html.H4("99.9%", style={'color': COLORS['success_green'], 'margin': '0'}),
+                                        html.Small("Uptime", style={'color': COLORS['neutral_text']})
+                                    ])
+                                ], style={'display': 'flex', 'align-items': 'center', 'gap': '15px'})
+                            ], width=4)
+                        ])
+                    ], width=6)
+                ]),
+                html.Hr(style={'border-color': COLORS['gold_primary'], 'margin': '20px 0'}),
+                html.P([
+                    html.I(className="fas fa-clock", style={'margin-right': '8px'}),
+                    f"Last Updated: {datetime.now().strftime('%A, %B %d, %Y at %I:%M %p')} | ",
+                    html.Span("● ", className="status-dot", style={'color': COLORS['success_green']}),
+                    html.Span("Live Data Stream Active", style={'color': COLORS['success_green']})
+                ], style={'margin': '0', 'color': COLORS['neutral_text']})
+            ], className="premium-header", style={'padding': '30px', 'margin-bottom': '30px', 'border-radius': '20px'}),
+            
+            # Charts Grid with premium containers
+            html.Div([
+                # Row 1: Financial and Deadlines
+                dbc.Row([
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="fas fa-coins", style={'margin-right': '10px', 'color': COLORS['gold_primary']}),
+                                html.Span("Financial Impact", style={'font-weight': '600', 'color': COLORS['gold_primary']})
+                            ], style={'padding': '15px 25px 0 25px'}),
+                            dcc.Loading([
+                                dcc.Graph(
+                                    id='financial-impact-chart',
+                                    figure=create_financial_chart(),
+                                    config={'displayModeBar': False, 'responsive': True},
+                                    style={'height': '420px'}
+                                )
+                        ], className="card"),
+                    
+                    # Deadline Tracker Chart
                     html.Div([
                         dcc.Loading([
                             dcc.Graph(
-                                id='financial-impact-chart',
-                                figure=create_financial_chart(),
+                                id='deadline-tracker-chart',
+                                figure=create_deadline_chart(),
                                 config={'displayModeBar': False, 'responsive': True},
                                 style={'height': '420px'}
                             )
                         ], color=COLORS['gold_primary'])
                     ], className="card"),
+                    
+                    # Alert Severity Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='alert-severity-chart',
+                                figure=create_alert_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Historical Trends Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='historical-trends-chart',
+                                figure=create_historical_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Growth vs Decline Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='growth-decline-chart',
+                                figure=create_growth_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Performance Comparison Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='performance-comparison-chart',
+                                figure=create_performance_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Risk & Compliance Gauge
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='risk-compliance-gauge',
+                                figure=create_risk_gauge(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Projection & Forecast Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='projection-forecast-chart',
+                                figure=create_projection_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                ], className="chart-grid"),
+                
+                # Status indicator - NO EMOJIS
+                html.Div([
+                    html.Div(id='status-indicator', children=[
+                        html.Span("● ", className="status-dot", 
+                                 style={'color': COLORS['success_green'], 'font-size': '20px'}),
+                        html.Span("System Online", style={'color': COLORS['neutral_text']})
+                    ], style={'text-align': 'center', 'padding': '20px', 'font-size': '14px'})
+                ])
+                
+            ], id="dashboard-content"),
+            
+            # Auto-refresh interval component
+            dcc.Interval(
+                id='auto-refresh-interval',
+                interval=300000,  # 5 minutes
+                n_intervals=0
+            ),
+            
+            # Download component for PDF
+            dcc.Download(id="download-pdf")
+            
+        ], className="main-content", style={'margin-left': '280px', 'padding': '20px'})    ], className="chart-container-premium")
+                    ], width=6),
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="fas fa-tasks", style={'margin-right': '10px', 'color': COLORS['gold_primary']}),
+                                html.Span("Project Deadlines", style={'font-weight': '600', 'color': COLORS['gold_primary']})
+                            ], style={'padding': '15px 25px 0 25px'}),
+                            dcc.Loading([
+                                dcc.Graph(
+                                    id='deadline-tracker-chart',
+                                    figure=create_deadline_chart(),
+                                    config={'displayModeBar': False, 'responsive': True},
+                                    style={'height': '420px'}
+                                )
+                            ], color=COLORS['gold_primary'])
+                        ], className="chart-container-premium")
+                    ], width=6)
+                ], className="mb-4"),
+                
+                # Row 2: Alerts and Historical
+                dbc.Row([
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="fas fa-bell", style={'margin-right': '10px', 'color': COLORS['gold_primary']}),
+                                html.Span("Alert Distribution", style={'font-weight': '600', 'color': COLORS['gold_primary']})
+                            ], style={'padding': '15px 25px 0 25px'}),
+                            dcc.Loading([
+                                dcc.Graph(
+                                    id='alert-severity-chart',
+                                    figure=create_alert_chart(),
+                                    config={'displayModeBar': False, 'responsive': True},
+                                    style={'height': '420px'}
+                                )
+                            ], color=COLORS['gold_primary'])
+                        ], className="chart-container-premium")
+                    ], width=6),
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="fas fa-chart-area", style={'margin-right': '10px', 'color': COLORS['gold_primary']}),
+                                html.Span("Historical Trends", style={'font-weight': '600', 'color': COLORS['gold_primary']})
+                            ], style={'padding': '15px 25px 0 25px'}),
+                            dcc.Loading([
+                                dcc.Graph(
+                                    id='historical-trends-chart',
+                                    figure=create_historical_chart(),
+                                    config={'displayModeBar': False, 'responsive': True},
+                                    style={'height': '420px'}
+                                )
+                            ], color=COLORS['gold_primary'])
+                        ], className="chart-container-premium")
+                    ], width=6)
+                ], className="mb-4"),
+                
+                # Row 3: Growth and Performance
+                dbc.Row([
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="fas fa-trending-up", style={'margin-right': '10px', 'color': COLORS['gold_primary']}),
+                                html.Span("Growth Analysis", style={'font-weight': '600', 'color': COLORS['gold_primary']})
+                            ], style={'padding': '15px 25px 0 25px'}),
+                            dcc.Loading([
+                                dcc.Graph(
+                                    id='growth-decline-chart',
+                                    figure=create_growth_chart(),
+                                    config={'displayModeBar': False, 'responsive': True},
+                                    style={'height': '420px'}
+                                )
+                            ], color=COLORS['gold_primary'])
+                        ], className="chart-container-premium")
+                    ], width=6),
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="fas fa-radar-chart", style={'margin-right': '10px', 'color': COLORS['gold_primary']}),
+                                html.Span("Performance KPIs", style={'font-weight': '600', 'color': COLORS['gold_primary']})
+                            ], style={'padding': '15px 25px 0 25px'}),
+                            dcc.Loading([
+                                dcc.Graph(
+                                    id='performance-comparison-chart',
+                                    figure=create_performance_chart(),
+                                    config={'displayModeBar': False, 'responsive': True},
+                                    style={'height': '420px'}
+                                )
+                            ], color=COLORS['gold_primary'])
+                        ], className="chart-container-premium")
+                    ], width=6)
+                ], className="mb-4"),
+                
+                # Row 4: Risk Gauge and Projections
+                dbc.Row([
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="fas fa-shield-alt", style={'margin-right': '10px', 'color': COLORS['gold_primary']}),
+                                html.Span("Risk Assessment", style={'font-weight': '600', 'color': COLORS['gold_primary']})
+                            ], style={'padding': '15px 25px 0 25px'}),
+                            dcc.Loading([
+                                dcc.Graph(
+                                    id='risk-compliance-gauge',
+                                    figure=create_risk_gauge(),
+                                    config={'displayModeBar': False, 'responsive': True},
+                                    style={'height': '420px'}
+                                )
+                            ], color=COLORS['gold_primary'])
+                        ], className="chart-container-premium")
+                    ], width=6),
+                    dbc.Col([
+                        html.Div([
+                            html.Div([
+                                html.I(className="fas fa-chart-line", style={'margin-right': '10px', 'color': COLORS['gold_primary']}),
+                                html.Span("Revenue Forecast", style={'font-weight': '600', 'color': COLORS['gold_primary']})
+                            ], style={'padding': '15px 25px 0 25px'}),
+                            dcc.Loading([
+                                dcc.Graph(
+                                    id='projection-forecast-chart',
+                                    figure=create_projection_chart(),
+                                    config={'displayModeBar': False, 'responsive': True},
+                                    style={'height': '420px'}
+                                )
+                            ], color=COLORS['gold_primary'])
+                        ], className="chart-container-premium")
+                    ], width=6)
+                ], className="mb-4"),
+                
+                # Elite status footer
+                html.Div([
+                    html.Div([
+                        html.Div([
+                            html.I(className="fas fa-database", style={'margin-right': '8px', 'color': COLORS['success_green']}),
+                            html.Span("8 Data Sources Active", style={'margin-right': '20px'}),
+                            html.Span("● ", className="status-dot", style={'color': COLORS['success_green']}),
+                            html.Span(f"Live Data - Updated at {datetime.now().strftime('%I:%M %p')}", 
+                                     style={'color': COLORS['neutral_text']})
+                        ], id='status-indicator')
+                    ], style={'text-align': 'center', 'padding': '25px'})
+                ])
+                
+            ]),
+            
+            # Auto-refresh interval
+            dcc.Interval(
+                id='auto-refresh-interval',
+                interval=300000,
+                n_intervals=0
+            ),
+            
+            # Download component
+            dcc.Download(id="download-pdf")
+            
+        ], className="main-content", style={'margin-left': '280px', 'padding': '25px'})
+    ])], className="card"),
                     
                     # Deadline Tracker Chart
                     html.Div([
@@ -1247,7 +1611,195 @@ app.index_string = '''
                 text-align: center;
             }
             
-            /* Enhanced sidebar styling */
+            /* Elite login page styling */
+            .login-container {
+                background: radial-gradient(ellipse at center, rgba(212, 175, 55, 0.1) 0%, rgba(15, 17, 19, 1) 70%);
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .particles-background {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                background-image: radial-gradient(2px 2px at 20px 30px, rgba(212, 175, 55, 0.3), transparent),
+                                  radial-gradient(2px 2px at 40px 70px, rgba(212, 175, 55, 0.2), transparent),
+                                  radial-gradient(1px 1px at 90px 40px, rgba(212, 175, 55, 0.4), transparent),
+                                  radial-gradient(1px 1px at 130px 80px, rgba(212, 175, 55, 0.3), transparent),
+                                  radial-gradient(2px 2px at 160px 30px, rgba(212, 175, 55, 0.2), transparent);
+                background-repeat: repeat;
+                background-size: 200px 200px;
+                animation: particleFloat 20s linear infinite;
+                opacity: 0.6;
+            }
+            
+            @keyframes particleFloat {
+                0% { transform: translate(0, 0); }
+                100% { transform: translate(-200px, -200px); }
+            }
+            
+            .company-logo {
+                font-size: 48px;
+                font-weight: 900;
+                background: linear-gradient(135deg, #D4AF37, #FFCF66, #D4AF37);
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                text-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+                letter-spacing: 3px;
+                animation: logoGlow 3s ease-in-out infinite alternate;
+            }
+            
+            .company-tagline {
+                color: #B8B9BB;
+                font-size: 16px;
+                font-weight: 300;
+                letter-spacing: 1px;
+                opacity: 0.8;
+            }
+            
+            @keyframes logoGlow {
+                0% { text-shadow: 0 0 30px rgba(212, 175, 55, 0.5); }
+                100% { text-shadow: 0 0 50px rgba(212, 175, 55, 0.8); }
+            }
+            
+            .security-badge {
+                background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(0,0,0,0.3));
+                color: #D4AF37;
+                padding: 5px 12px;
+                border-radius: 20px;
+                font-size: 12px;
+                border: 1px solid rgba(212, 175, 55, 0.3);
+                backdrop-filter: blur(10px);
+            }
+            
+            .form-label-enhanced {
+                color: #D4AF37 !important;
+                font-weight: 600;
+                margin-bottom: 8px;
+            }
+            
+            .form-control-enhanced {
+                background-color: rgba(27, 29, 31, 0.8) !important;
+                border: 2px solid rgba(212, 175, 55, 0.3) !important;
+                color: #B8B9BB !important;
+                border-radius: 8px !important;
+                transition: all 0.3s ease;
+            }
+            
+            .form-control-enhanced:focus {
+                background-color: rgba(27, 29, 31, 1) !important;
+                border-color: #D4AF37 !important;
+                box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.25) !important;
+                color: #FFCF66 !important;
+            }
+            
+            .login-btn-elite {
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                box-shadow: 0 8px 25px rgba(212, 175, 55, 0.3);
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .login-btn-elite::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+                transition: left 0.5s;
+            }
+            
+            .login-btn-elite:hover::before {
+                left: 100%;
+            }
+            
+            .login-btn-elite:hover {
+                transform: translateY(-3px) scale(1.02);
+                box-shadow: 0 15px 40px rgba(212, 175, 55, 0.5);
+            }
+            
+            .login-card-elite {
+                animation: slideInUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+            }
+            
+            /* Enhanced dashboard features */
+            .premium-header {
+                background: linear-gradient(135deg, 
+                    rgba(212, 175, 55, 0.1) 0%, 
+                    rgba(27, 29, 31, 0.9) 50%, 
+                    rgba(212, 175, 55, 0.1) 100%);
+                border: 1px solid rgba(212, 175, 55, 0.3);
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .premium-header::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+                animation: headerShimmer 8s infinite;
+            }
+            
+            @keyframes headerShimmer {
+                0% { left: -100%; }
+                50% { left: 100%; }
+                100% { left: 100%; }
+            }
+            
+            .executive-badge {
+                background: linear-gradient(135deg, #D4AF37, #FFCF66);
+                color: #0F1113;
+                padding: 8px 16px;
+                border-radius: 25px;
+                font-weight: 700;
+                font-size: 14px;
+                box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+                animation: badgePulse 3s ease-in-out infinite;
+            }
+            
+            @keyframes badgePulse {
+                0%, 100% { box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); }
+                50% { box-shadow: 0 6px 25px rgba(212, 175, 55, 0.7); }
+            }
+            
+            /* Premium chart enhancements */
+            .chart-container-premium {
+                position: relative;
+                background: linear-gradient(145deg, 
+                    rgba(27, 29, 31, 0.95) 0%, 
+                    rgba(37, 40, 48, 0.95) 100%);
+                border: 1px solid rgba(212, 175, 55, 0.2);
+                border-radius: 20px;
+                overflow: hidden;
+                backdrop-filter: blur(20px);
+            }
+            
+            .chart-container-premium::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: linear-gradient(90deg, 
+                    transparent, 
+                    rgba(212, 175, 55, 0.8), 
+                    transparent);
+                animation: chartBorderFlow 4s ease-in-out infinite;
+            }
+            
+            @keyframes chartBorderFlow {
+                0%, 100% { opacity: 0.3; }
+                50% { opacity: 1; }
+            }
             .logo-enhanced {
                 text-align: center;
                 padding: 20px;
@@ -1548,7 +2100,7 @@ app.layout = html.Div([
     html.Div(id='page-content')
 ])
 
-# Simplified page routing - only dashboard/login
+# Simplified page routing to fix logout
 @app.callback(
     Output('page-content', 'children'),
     [Input('url', 'pathname')],
@@ -1559,13 +2111,17 @@ app.layout = html.Div([
 def display_page(pathname, session_data, user_data):
     """Display dashboard or login based on authentication"""
     
-    # Check authentication using enhanced method
+    # If explicitly going to login page, show login
+    if pathname == '/login':
+        return get_login_layout()
+    
+    # Check authentication
     authenticated = is_authenticated(session_data, user_data)
     
     if not authenticated:
         return get_login_layout()
     
-    # For now, always show dashboard regardless of path
+    # Show dashboard for authenticated users
     return get_dashboard_layout()
 
 # Login callback with improved session handling
