@@ -980,7 +980,7 @@ def get_google_slides_layout():
     ])
 
 def get_sidebar():
-    """Enhanced sidebar with professional features"""
+    """Enhanced sidebar with Google Slides integration"""
     return html.Div([
         html.Div([
             html.Div("LexCura", style={'font-size': '28px', 'font-weight': '700', 'color': COLORS['gold_primary']}),
@@ -1006,11 +1006,36 @@ def get_sidebar():
         ], style={'background-color': COLORS['dark_grey'], 'border': f'1px solid {COLORS["gold_primary"]}',
                   'margin': '20px 10px', 'border-radius': '10px'}),
         
+        # Reports Section
+        dbc.Card([
+            dbc.CardBody([
+                html.H6("Weekly Reports", style={'color': COLORS['gold_primary'], 'margin-bottom': '15px'}),
+                html.Div([
+                    html.Div([
+                        dbc.Button([
+                            html.I(className="fas fa-file-pdf", style={'margin-right': '8px'}),
+                            "View Current Report"
+                        ], id="view-pdf-btn", color="warning", size="sm", className="sidebar-btn mb-2",
+                           style={'width': '100%', 'background-color': COLORS['gold_primary'],
+                                  'border-color': COLORS['gold_primary']}),
+                        html.Span("1", className="notification-badge")
+                    ], className="button-with-badge", style={'width': '100%', 'margin-bottom': '8px'}),
+                    
+                    dbc.Button([
+                        html.I(className="fas fa-presentation", style={'margin-right': '8px'}),
+                        "Google Slides"
+                    ], id="view-slides-btn", color="info", size="sm", className="sidebar-btn",
+                       style={'width': '100%'})
+                ])
+            ])
+        ], style={'background-color': COLORS['dark_grey'], 'border': f'1px solid {COLORS["gold_primary"]}',
+                  'margin': '20px 10px', 'border-radius': '10px'}),
+        
         # Action Buttons
         html.Div([
             dbc.Button([
-                html.I(className="fas fa-file-pdf", style={'margin-right': '8px'}),
-                "Export PDF"
+                html.I(className="fas fa-download", style={'margin-right': '8px'}),
+                "Export Data"
             ], id="pdf-reports-btn", color="warning", size="sm", className="sidebar-btn",
                style={'width': '90%', 'margin': '10px 5%', 'background-color': COLORS['gold_primary'],
                       'border-color': COLORS['gold_primary']}),
@@ -1507,9 +1532,53 @@ app.index_string = '''
                 animation: statusShine 5s infinite;
             }
             
-            @keyframes statusShine {
-                0% { left: -100%; }
-                100% { left: 100%; }
+            /* Notification badge styling */
+            .notification-badge {
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background: linear-gradient(45deg, #E4574C, #F4A261);
+                color: white;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                font-size: 12px;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 2px solid #0F1113;
+                animation: badgePulse 2s infinite;
+            }
+            
+            @keyframes badgePulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+            }
+            
+            /* Enhanced button positioning for badges */
+            .button-with-badge {
+                position: relative;
+                display: inline-block;
+            }
+            
+            /* Subtle data flow animation */
+            .data-flow {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 2px;
+                background: linear-gradient(90deg, 
+                    transparent 0%, 
+                    #D4AF37 50%, 
+                    transparent 100%);
+                animation: dataStream 3s linear infinite;
+            }
+            
+            @keyframes dataStream {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
             }
             .logo-enhanced {
                 text-align: center;
