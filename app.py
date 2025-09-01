@@ -1473,32 +1473,72 @@ app.index_string = '''
                 width: 100%;
             }
             
+            /* Enhanced KPI card styling for better readability */
             .elite-mini-card {
                 background: linear-gradient(145deg, 
                     rgba(27, 29, 31, 0.9) 0%, 
                     rgba(42, 45, 48, 0.9) 100%) !important;
                 border: 1px solid rgba(212, 175, 55, 0.3) !important;
-                border-radius: 12px !important;
+                border-radius: 15px !important;
                 backdrop-filter: blur(20px);
                 box-shadow: 
-                    0 6px 20px rgba(0, 0, 0, 0.4),
+                    0 8px 25px rgba(0, 0, 0, 0.4),
                     inset 0 1px 0 rgba(255, 255, 255, 0.1);
-                transition: all 0.3s ease !important;
-                height: 100%;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+                min-height: 120px;
+                display: flex;
+                align-items: center;
             }
             
             .elite-mini-card:hover {
-                transform: translateY(-5px) !important;
+                transform: translateY(-8px) scale(1.03) !important;
                 border-color: rgba(212, 175, 55, 0.6) !important;
                 box-shadow: 
-                    0 12px 35px rgba(0, 0, 0, 0.6),
-                    0 0 20px rgba(212, 175, 55, 0.3),
+                    0 20px 50px rgba(0, 0, 0, 0.6),
+                    0 0 30px rgba(212, 175, 55, 0.3),
                     inset 0 1px 0 rgba(255, 255, 255, 0.2);
             }
             
+            .kpi-icon-value {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                margin-bottom: 8px;
+            }
+            
             .elite-kpi-card {
-                padding: 15px 12px !important;
-                text-align: center;
+                padding: 20px 15px !important;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            
+            /* Better header spacing */
+            .elite-header {
+                background: linear-gradient(135deg, #1B1D1F 0%, #2A2D30 50%, #1B1D1F 100%);
+                border: 2px solid #D4AF37;
+                border-radius: 20px;
+                padding: 25px 30px;
+                margin-bottom: 30px;
+                box-shadow: 
+                    0 0 50px rgba(212, 175, 55, 0.2),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                position: relative;
+                overflow: hidden;
+                width: 100%;
+                min-height: 140px;
+                display: flex;
+                align-items: center;
+            }
+            
+            /* Elite KPI container spacing */
+            .elite-kpi-container {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
             }
             
             /* Button fixes */
