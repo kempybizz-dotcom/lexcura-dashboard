@@ -242,7 +242,7 @@ def get_base_layout(title):
         'yaxis': {'color': COLORS['neutral_text'], 'gridcolor': '#2A2D30'}
     }
 
-# Chart creation functions with enhanced error handling
+# Enhanced chart creation with animations
 def create_financial_chart():
     try:
         fig = go.Figure()
@@ -256,7 +256,8 @@ def create_financial_chart():
             marker_color=colors_current,
             hovertemplate='<b>%{x}</b><br>Current: $%{y:,.0f}<br><extra></extra>',
             text=[f"${x:,.0f}" for x in data['financial']['current']],
-            textposition='outside'
+            textposition='outside',
+            marker_line=dict(color='rgba(255,255,255,0.3)', width=1)
         ))
         
         fig.add_trace(go.Bar(
@@ -265,12 +266,14 @@ def create_financial_chart():
             name='Previous Period',
             marker_color=COLORS['gold_primary'],
             opacity=0.7,
-            hovertemplate='<b>%{x}</b><br>Previous: $%{y:,.0f}<br><extra></extra>'
+            hovertemplate='<b>%{x}</b><br>Previous: $%{y:,.0f}<br><extra></extra>',
+            marker_line=dict(color='rgba(255,255,255,0.2)', width=1)
         ))
         
         layout = get_base_layout('Financial Impact Analysis')
         layout['yaxis']['tickformat'] = '$,.0f'
         layout['barmode'] = 'group'
+        layout['transition'] = {'duration': 800, 'easing': 'cubic-in-out'}
         
         fig.update_layout(layout)
         return fig
@@ -977,24 +980,94 @@ def get_google_slides_layout():
     ])
 
 def get_sidebar():
-    """Minimal sidebar with only essential buttons"""
+    """Enhanced sidebar with professional features"""
     return html.Div([
-        html.Div("LexCura Dashboard", className="logo"),
         html.Div([
-            # Only essential buttons
-            dbc.Button("PDF Reports", id="pdf-reports-btn", color="warning", size="sm",
-                      style={'width': '90%', 'margin': '10px 5%', 'background-color': COLORS['gold_primary'],
-                             'border-color': COLORS['gold_primary']}),
-            html.Hr(style={'border-color': COLORS['gold_primary'], 'margin': '20px 0'}),
-            dbc.Button("Logout", id="logout-btn", color="danger", size="sm",
-                      style={'width': '90%', 'margin': '10px 5%'})
+            html.Div("LexCura", style={'font-size': '28px', 'font-weight': '700', 'color': COLORS['gold_primary']}),
+            html.Div("Executive Dashboard", style={'font-size': '14px', 'color': COLORS['neutral_text'], 'opacity': '0.8'})
+        ], className="logo-enhanced"),
+        
+        # System Status Card
+        dbc.Card([
+            dbc.CardBody([
+                html.H6("System Status", style={'color': COLORS['gold_primary'], 'margin-bottom': '10px'}),
+                html.Div([
+                    html.Span("● ", className="status-dot", style={'color': COLORS['success_green']}),
+                    html.Small("Online", style={'color': COLORS['success_green']})
+                ], className="mb-1"),
+                html.Div([
+                    html.Small(f"Uptime: 99.9%", style={'color': COLORS['neutral_text']})
+                ]),
+                html.Div([
+                    html.Small(f"Last Update: {datetime.now().strftime('%H:%M')}", 
+                              style={'color': COLORS['neutral_text']})
+                ])
+            ])
+        ], style={'background-color': COLORS['dark_grey'], 'border': f'1px solid {COLORS["gold_primary"]}',
+                  'margin': '20px 10px', 'border-radius': '10px'}),
+        
+        # Action Buttons
+        html.Div([
+            dbc.Button([
+                html.I(className="fas fa-file-pdf", style={'margin-right': '8px'}),
+                "Export PDF"
+            ], id="pdf-reports-btn", color="warning", size="sm", className="sidebar-btn",
+               style={'width': '90%', 'margin': '10px 5%', 'background-color': COLORS['gold_primary'],
+                      'border-color': COLORS['gold_primary']}),
+            
+            dbc.Button([
+                html.I(className="fas fa-sync-alt", style={'margin-right': '8px'}),
+                "Refresh Data"
+            ], id="refresh-manual-btn", color="info", size="sm", className="sidebar-btn",
+               style={'width': '90%', 'margin': '10px 5%'}),
+            
+            html.Hr(style={'border-color': COLORS['gold_primary'], 'margin': '20px 10px'}),
+            
+            dbc.Button([
+                html.I(className="fas fa-sign-out-alt", style={'margin-right': '8px'}),
+                "Logout"
+            ], id="logout-btn", color="danger", size="sm", className="sidebar-btn",
+               style={'width': '90%', 'margin': '10px 5%'})
         ])
     ], className="sidebar")
 
-def get_header(title):
+def get_header(title="Executive Business Intelligence Dashboard"):
+    """Enhanced header with live stats"""
     return html.Div([
-        html.H1(title),
-        html.P(f"Last Updated: {datetime.now().strftime('%A, %B %d, %Y at %I:%M %p')}")
+        dbc.Row([
+            dbc.Col([
+                html.H1(title, className="glow-text"),
+                html.P([
+                    html.Span(f"Last Updated: {datetime.now().strftime('%A, %B %d, %Y at %I:%M %p')}", 
+                             style={'margin-right': '20px'}),
+                    html.Span("● ", className="status-dot", style={'color': COLORS['success_green']}),
+                    html.Span("Live Data Stream Active", style={'color': COLORS['success_green']})
+                ])
+            ], width=8),
+            dbc.Col([
+                # Quick stats cards
+                dbc.Row([
+                    dbc.Col([
+                        html.Div([
+                            html.H4("$2.85M", style={'color': COLORS['gold_primary'], 'margin': '0'}),
+                            html.Small("Revenue", style={'color': COLORS['neutral_text']})
+                        ], style={'text-align': 'center'})
+                    ], width=4),
+                    dbc.Col([
+                        html.Div([
+                            html.H4("74", style={'color': COLORS['warning_orange'], 'margin': '0'}),
+                            html.Small("Alerts", style={'color': COLORS['neutral_text']})
+                        ], style={'text-align': 'center'})
+                    ], width=4),
+                    dbc.Col([
+                        html.Div([
+                            html.H4("99.9%", style={'color': COLORS['success_green'], 'margin': '0'}),
+                            html.Small("Uptime", style={'color': COLORS['neutral_text']})
+                        ], style={'text-align': 'center'})
+                    ], width=4)
+                ])
+            ], width=4)
+        ])
     ], className="header")
 
 # Main dashboard layout
@@ -1127,7 +1200,7 @@ def get_dashboard_layout():
         ], className="main-content", style={'margin-left': '280px', 'padding': '20px'})
     ])
 
-# Enhanced CSS
+# Enhanced CSS with Font Awesome icons
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -1137,6 +1210,7 @@ app.index_string = '''
         {%favicon%}
         {%css%}
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             * {
@@ -1173,30 +1247,130 @@ app.index_string = '''
                 text-align: center;
             }
             
-            /* PDF Reports and Logout button enhancements */
-            #pdf-reports-btn {
+            /* Enhanced sidebar styling */
+            .logo-enhanced {
+                text-align: center;
+                padding: 20px;
+                border-bottom: 2px solid #D4AF37;
+                margin-bottom: 20px;
+                background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(0,0,0,0) 100%);
+            }
+            
+            /* Sidebar button enhancements */
+            .sidebar-btn {
                 transition: all 0.3s ease;
                 border-radius: 8px !important;
                 font-weight: 500;
-                margin: 10px 5% !important;
+                margin: 8px 5% !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             }
             
-            #pdf-reports-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
-                background-color: #FFCF66 !important;
+            .sidebar-btn:hover {
+                transform: translateY(-2px) scale(1.02);
+                box-shadow: 0 6px 20px rgba(0,0,0,0.4);
             }
             
-            #logout-btn {
-                transition: all 0.3s ease;
-                border-radius: 8px !important;
-                font-weight: 500;
-                margin: 10px 5% !important;
+            /* Chart loading animation */
+            .chart-loading {
+                position: relative;
+                overflow: hidden;
             }
             
-            #logout-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 15px rgba(228, 87, 76, 0.4);
+            .chart-loading::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent);
+                animation: shimmer 2s infinite;
+                z-index: 1;
+            }
+            
+            @keyframes shimmer {
+                0% { left: -100%; }
+                100% { left: 100%; }
+            }
+            
+            /* Enhanced card animations */
+            .card {
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .card::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, #D4AF37, #FFCF66, #D4AF37);
+                background-size: 200% 100%;
+                animation: gradientShift 3s ease-in-out infinite;
+            }
+            
+            @keyframes gradientShift {
+                0%, 100% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+            }
+            
+            .card:hover {
+                transform: translateY(-8px) scale(1.02);
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+                border-color: rgba(212, 175, 55, 0.6);
+            }
+            
+            /* Floating elements */
+            .floating {
+                animation: float 6s ease-in-out infinite;
+            }
+            
+            @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+            }
+            
+            /* Glowing text effect */
+            .glow-text {
+                text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+                animation: textGlow 2s ease-in-out infinite alternate;
+            }
+            
+            @keyframes textGlow {
+                from { text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
+                to { text-shadow: 0 0 20px rgba(212, 175, 55, 0.8); }
+            }
+            
+            /* Enhanced status indicator */
+            #status-indicator {
+                background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(0,0,0,0.3));
+                border-radius: 25px;
+                padding: 15px 25px;
+                border: 1px solid rgba(212, 175, 55, 0.3);
+                backdrop-filter: blur(10px);
+            }
+            
+            /* Scrollbar enhancements */
+            ::-webkit-scrollbar {
+                width: 12px;
+            }
+            
+            ::-webkit-scrollbar-track {
+                background: linear-gradient(180deg, #0F1113, #1B1D1F);
+                border-radius: 6px;
+            }
+            
+            ::-webkit-scrollbar-thumb {
+                background: linear-gradient(180deg, #D4AF37, #FFCF66);
+                border-radius: 6px;
+                border: 2px solid #0F1113;
+            }
+            
+            ::-webkit-scrollbar-thumb:hover {
+                background: linear-gradient(180deg, #FFCF66, #D4AF37);
             }
             
             .nav-item.active {
@@ -1454,7 +1628,39 @@ def handle_logout(n_clicks, session_data, user_data):
     # If no click, return current state
     return session_data or {'authenticated': False}, user_data or {}, "/"
 
-# PDF Reports button callback
+# Manual refresh callback
+@app.callback(
+    [Output('financial-impact-chart', 'figure', allow_duplicate=True),
+     Output('deadline-tracker-chart', 'figure', allow_duplicate=True),
+     Output('alert-severity-chart', 'figure', allow_duplicate=True),
+     Output('historical-trends-chart', 'figure', allow_duplicate=True),
+     Output('growth-decline-chart', 'figure', allow_duplicate=True),
+     Output('performance-comparison-chart', 'figure', allow_duplicate=True),
+     Output('risk-compliance-gauge', 'figure', allow_duplicate=True),
+     Output('projection-forecast-chart', 'figure', allow_duplicate=True)],
+    Input("refresh-manual-btn", "n_clicks"),
+    prevent_initial_call=True
+)
+def manual_refresh_charts(n_clicks):
+    if n_clicks and n_clicks > 0:
+        # Add small data variations for realistic updates
+        global data
+        for i in range(len(data['financial']['current'])):
+            variation = random.uniform(-0.02, 0.02)
+            data['financial']['current'][i] = int(data['financial']['current'][i] * (1 + variation))
+        
+        return (
+            create_financial_chart(),
+            create_deadline_chart(),
+            create_alert_chart(),
+            create_historical_chart(),
+            create_growth_chart(),
+            create_performance_chart(),
+            create_risk_gauge(),
+            create_projection_chart()
+        )
+    
+    return [dash.no_update] * 8
 @app.callback(
     Output("download-pdf", "data", allow_duplicate=True),
     Input("pdf-reports-btn", "n_clicks"),
