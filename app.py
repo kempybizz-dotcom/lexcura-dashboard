@@ -2059,61 +2059,67 @@ app.layout = html.Div([
     html.Div(id='page-content')
 ])
 
-# Simplified page routing - only dashboard/login
+# SIMPLIFIED routing - eliminates redirect loops
 @app.callback(
     Output('page-content', 'children'),
-    [Input('url', 'pathname')],
-    [State('session-store', 'data'),
-     State('current-user', 'data')],
-    prevent_initial_call=False
+    [Input('url', 'pathname'),
+     Input('session-store', 'data'),
+     Input('current-user', 'data')]
 )
-def display_page(pathname, session_data, user_data):
-    """Display dashboard or login based on authentication"""
+def display_page_simplified(pathname, session_data, user_data):
+    """Simplified page routing without redirect loops"""
     
-    # Check authentication using enhanced method
-    authenticated = is_authenticated(session_data, user_data)
+    # Check if user is logged in
+    is_logged_in = False
     
-    if not authenticated:
+    if session_data and session_data.get('authenticated'):
+        is_logged_in = True
+    elif session_data and session_data.get('session_id'):
+        session_id = session_data.get('session_id')
+        if session_id and session_id in session_store:
+            is_logged_in = True
+    
+    # Always show login if not authenticated
+    if not is_logged_in:
         return get_login_layout()
     
-    # For now, always show dashboard regardless of path
+    # If authenticated, always show dashboard regardless of pathname
     return get_dashboard_layout()
 
-# Login callback with improved session handling
+# BULLETPROOF login callback - minimal complexity
 @app.callback(
     [Output('session-store', 'data'),
      Output('current-user', 'data'),
-     Output('login-alert', 'children'),
-     Output('url', 'pathname')],
+     Output('login-alert', 'children')],
     Input('login-button', 'n_clicks'),
     [State('username-input', 'value'),
-     State('password-input', 'value')]
+     State('password-input', 'value')],
+    prevent_initial_call=True
 )
-def handle_login(n_clicks, username, password):
+def handle_login_fixed(n_clicks, username, password):
     if n_clicks and username and password:
         if verify_credentials(username, password):
             session_id = generate_session_id()
             session_data = {
                 'username': username,
                 'login_time': datetime.now().isoformat(),
-                'authenticated': True
+                'authenticated': True,
+                'session_id': session_id
             }
             session_store[session_id] = session_data
             
             return (
-                {'session_id': session_id, 'authenticated': True},
-                {'username': username, 'session_id': session_id},
-                dbc.Alert("Login successful! Redirecting...", color="success"),
-                "/"
+                session_data,  # session-store
+                session_data,  # current-user  
+                dbc.Alert("Login successful!", color="success", duration=2000)
             )
         else:
             return (
-                {'authenticated': False},
                 {},
-                dbc.Alert("Invalid credentials. Please try again.", color="danger"),
-                "/login"
+                {},
+                dbc.Alert("Invalid credentials. Please try again.", color="danger")
             )
-    return {'authenticated': False}, {}, "", "/login"
+    return {}, {}, ""
 
 # Fixed logout callback with forced redirect
 @app.callback(
