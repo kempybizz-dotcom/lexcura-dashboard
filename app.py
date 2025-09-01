@@ -54,9 +54,26 @@ def verify_credentials(username, password):
     """Verify user credentials"""
     return USERS.get(username) == password
 
-def is_authenticated(session_id):
-    """Check if session is authenticated"""
-    return session_id in session_store
+def is_authenticated(session_data, user_data=None):
+    """Enhanced authentication check with multiple fallbacks"""
+    if not session_data and not user_data:
+        return False
+    
+    # Check session store data
+    if session_data:
+        if session_data.get('authenticated') == True:
+            return True
+        session_id = session_data.get('session_id')
+        if session_id and session_id in session_store:
+            return True
+    
+    # Check user data
+    if user_data:
+        session_id = user_data.get('session_id')
+        if session_id and session_id in session_store:
+            return True
+    
+    return False
 
 # Enhanced data generation with better error handling
 def generate_sample_data():
@@ -683,7 +700,7 @@ def get_login_layout():
 # Analytics page layout - Different view of the same data
 def get_analytics_layout():
     return html.Div([
-        get_sidebar(),
+        get_sidebar("/analytics"),
         html.Div([
             get_header("Advanced Analytics"),
             dbc.Container([
@@ -959,16 +976,29 @@ def get_google_slides_layout():
         ], className="main-content", style={'margin-left': '280px', 'padding': '20px'})
     ])
 
-def get_sidebar():
+def get_sidebar(current_path="/"):
+    """Sidebar with active page highlighting"""
+    nav_items = [
+        ("Overview", "/", current_path == "/"),
+        ("Analytics", "/analytics", current_path == "/analytics"),
+        ("Reports", "/reports", current_path == "/reports"),
+        ("Google Slides", "/slides", current_path == "/slides"),
+        ("Archive", "/archive", current_path == "/archive"),
+        ("Settings", "/settings", current_path == "/settings")
+    ]
+    
+    nav_elements = []
+    for title, href, is_active in nav_items:
+        class_name = "nav-item active" if is_active else "nav-item"
+        nav_elements.append(
+            html.A(title, href=href, className=class_name, 
+                   style={'text-decoration': 'none'})
+        )
+    
     return html.Div([
         html.Div("LexCura Dashboard", className="logo"),
         html.Div([
-            html.A("Overview", href="/", className="nav-item", style={'text-decoration': 'none'}),
-            html.A("Analytics", href="/analytics", className="nav-item", style={'text-decoration': 'none'}),
-            html.A("Reports", href="/reports", className="nav-item", style={'text-decoration': 'none'}),
-            html.A("Google Slides", href="/slides", className="nav-item", style={'text-decoration': 'none'}),
-            html.A("Archive", href="/archive", className="nav-item", style={'text-decoration': 'none'}),
-            html.A("Settings", href="/settings", className="nav-item", style={'text-decoration': 'none'}),
+            *nav_elements,
             html.Hr(style={'border-color': COLORS['gold_primary'], 'margin': '20px 0'}),
             html.Div("Logout", id="logout-btn", className="nav-item", n_clicks=0,
                     style={'color': COLORS['danger_red'], 'cursor': 'pointer'})
@@ -1371,29 +1401,32 @@ app.layout = html.Div([
     html.Div(id='page-content')
 ])
 
-# Callback for page routing and authentication with better session handling
+# Callback for page routing with ROBUST authentication
 @app.callback(
     Output('page-content', 'children'),
     [Input('url', 'pathname')],
     [State('session-store', 'data'),
-     State('current-user', 'data')]
+     State('current-user', 'data')],
+    prevent_initial_call=False
 )
 def display_page(pathname, session_data, user_data):
-    # Check multiple sources for authentication
-    is_authenticated_user = False
+    """Display appropriate page based on authentication and route"""
     
-    if session_data and session_data.get('authenticated'):
-        is_authenticated_user = True
-    elif user_data and user_data.get('session_id'):
-        session_id = user_data.get('session_id')
-        if session_id in session_store:
-            is_authenticated_user = True
+    # Debug print (remove in production)
+    print(f"Navigation to: {pathname}")
+    print(f"Session data: {session_data}")
+    print(f"User data: {user_data}")
     
-    # If not authenticated, show login
-    if not is_authenticated_user:
+    # Check authentication using enhanced method
+    authenticated = is_authenticated(session_data, user_data)
+    
+    if not authenticated:
+        print("Not authenticated, showing login")
         return get_login_layout()
     
-    # Route to appropriate page
+    print(f"Authenticated, showing page: {pathname}")
+    
+    # Route to appropriate page with active navigation
     if pathname == '/analytics':
         return get_analytics_layout()
     elif pathname == '/reports':
@@ -1401,11 +1434,12 @@ def display_page(pathname, session_data, user_data):
     elif pathname == '/slides':
         return get_google_slides_layout()
     elif pathname == '/archive':
-        return get_archive_layout()
+        return get_archive_layout()  
     elif pathname == '/settings':
         return get_settings_layout()
     elif pathname == '/login':
-        return get_login_layout()
+        # If authenticated but trying to access login, redirect to dashboard
+        return get_dashboard_layout()
     else:
         return get_dashboard_layout()  # Default overview page
 
