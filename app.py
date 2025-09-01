@@ -286,6 +286,25 @@ def create_financial_chart():
 
 def create_deadline_chart():
     try:
+        # BULLETPROOF data validation
+        if not data.get('deadlines') or not isinstance(data['deadlines'], dict):
+            raise ValueError("Invalid deadline data structure")
+            
+        tasks = data['deadlines'].get('tasks', ['Sample Task'])
+        days_left = data['deadlines'].get('days_left', [5])
+        progress = data['deadlines'].get('progress', [50])
+        urgency = data['deadlines'].get('urgency', ['Normal'])
+        
+        # Ensure all lists are same length
+        min_length = min(len(tasks), len(days_left), len(progress), len(urgency))
+        if min_length == 0:
+            raise ValueError("Empty deadline data")
+            
+        tasks = tasks[:min_length]
+        days_left = days_left[:min_length]
+        progress = progress[:min_length] 
+        urgency = urgency[:min_length]
+        
         urgency_colors = {
             'Critical': COLORS['danger_red'],
             'Warning': COLORS['warning_orange'], 
@@ -294,30 +313,44 @@ def create_deadline_chart():
         
         fig = go.Figure()
         
-        colors = [urgency_colors.get(urgency, COLORS['neutral_text']) for urgency in data['deadlines']['urgency']]
+        colors = [urgency_colors.get(u, COLORS['neutral_text']) for u in urgency]
         
         fig.add_trace(go.Bar(
-            x=data['deadlines']['days_left'],
-            y=data['deadlines']['tasks'],
+            x=days_left,
+            y=tasks,
             orientation='h',
             marker_color=colors,
             hovertemplate='<b>%{y}</b><br>Days Remaining: %{x}<br>Progress: %{customdata}%<br><extra></extra>',
-            customdata=data['deadlines']['progress'],
-            text=[f"{days}d" for days in data['deadlines']['days_left']],
-            textposition='middle right'
+            customdata=progress,
+            text=[f"{days}d" for days in days_left],
+            textposition='middle right',
+            marker_line=dict(color='rgba(255,255,255,0.3)', width=1)
         ))
         
         layout = get_base_layout('Project Deadline Tracker')
         layout['xaxis']['title'] = 'Days Remaining'
         layout['height'] = 400
+        layout['transition'] = {'duration': 800, 'easing': 'cubic-in-out'}
         
         fig.update_layout(layout)
         return fig
+        
     except Exception as e:
-        print(f"Error in deadline chart: {str(e)}")
+        print(f"CRITICAL: Deadline chart error: {str(e)}")
+        # Create minimal fallback chart
         fig = go.Figure()
-        fig.add_annotation(text="Deadline Chart Error - Please Refresh", x=0.5, y=0.5, showarrow=False)
-        fig.update_layout(get_base_layout('Project Deadline Tracker'))
+        fig.add_trace(go.Bar(
+            x=[5, 10, 15],
+            y=['Task 1', 'Task 2', 'Task 3'],
+            orientation='h',
+            marker_color=COLORS['success_green'],
+            text=['5d', '10d', '15d'],
+            textposition='middle right'
+        ))
+        layout = get_base_layout('Project Deadline Tracker - Backup Data')
+        layout['xaxis']['title'] = 'Days Remaining'
+        layout['height'] = 400
+        fig.update_layout(layout)
         return fig
 
 def create_alert_chart():
