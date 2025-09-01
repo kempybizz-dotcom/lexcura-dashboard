@@ -286,25 +286,6 @@ def create_financial_chart():
 
 def create_deadline_chart():
     try:
-        # BULLETPROOF data validation
-        if not data.get('deadlines') or not isinstance(data['deadlines'], dict):
-            raise ValueError("Invalid deadline data structure")
-            
-        tasks = data['deadlines'].get('tasks', ['Sample Task'])
-        days_left = data['deadlines'].get('days_left', [5])
-        progress = data['deadlines'].get('progress', [50])
-        urgency = data['deadlines'].get('urgency', ['Normal'])
-        
-        # Ensure all lists are same length
-        min_length = min(len(tasks), len(days_left), len(progress), len(urgency))
-        if min_length == 0:
-            raise ValueError("Empty deadline data")
-            
-        tasks = tasks[:min_length]
-        days_left = days_left[:min_length]
-        progress = progress[:min_length] 
-        urgency = urgency[:min_length]
-        
         urgency_colors = {
             'Critical': COLORS['danger_red'],
             'Warning': COLORS['warning_orange'], 
@@ -313,44 +294,30 @@ def create_deadline_chart():
         
         fig = go.Figure()
         
-        colors = [urgency_colors.get(u, COLORS['neutral_text']) for u in urgency]
+        colors = [urgency_colors.get(urgency, COLORS['neutral_text']) for urgency in data['deadlines']['urgency']]
         
         fig.add_trace(go.Bar(
-            x=days_left,
-            y=tasks,
+            x=data['deadlines']['days_left'],
+            y=data['deadlines']['tasks'],
             orientation='h',
             marker_color=colors,
             hovertemplate='<b>%{y}</b><br>Days Remaining: %{x}<br>Progress: %{customdata}%<br><extra></extra>',
-            customdata=progress,
-            text=[f"{days}d" for days in days_left],
-            textposition='middle right',
-            marker_line=dict(color='rgba(255,255,255,0.3)', width=1)
+            customdata=data['deadlines']['progress'],
+            text=[f"{days}d" for days in data['deadlines']['days_left']],
+            textposition='middle right'
         ))
         
         layout = get_base_layout('Project Deadline Tracker')
         layout['xaxis']['title'] = 'Days Remaining'
         layout['height'] = 400
-        layout['transition'] = {'duration': 800, 'easing': 'cubic-in-out'}
         
         fig.update_layout(layout)
         return fig
-        
     except Exception as e:
-        print(f"CRITICAL: Deadline chart error: {str(e)}")
-        # Create minimal fallback chart
+        print(f"Error in deadline chart: {str(e)}")
         fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x=[5, 10, 15],
-            y=['Task 1', 'Task 2', 'Task 3'],
-            orientation='h',
-            marker_color=COLORS['success_green'],
-            text=['5d', '10d', '15d'],
-            textposition='middle right'
-        ))
-        layout = get_base_layout('Project Deadline Tracker - Backup Data')
-        layout['xaxis']['title'] = 'Days Remaining'
-        layout['height'] = 400
-        fig.update_layout(layout)
+        fig.add_annotation(text="Deadline Chart Error - Please Refresh", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(get_base_layout('Project Deadline Tracker'))
         return fig
 
 def create_alert_chart():
@@ -2059,67 +2026,61 @@ app.layout = html.Div([
     html.Div(id='page-content')
 ])
 
-# SIMPLIFIED routing - eliminates redirect loops
+# Simplified page routing - only dashboard/login
 @app.callback(
     Output('page-content', 'children'),
-    [Input('url', 'pathname'),
-     Input('session-store', 'data'),
-     Input('current-user', 'data')]
+    [Input('url', 'pathname')],
+    [State('session-store', 'data'),
+     State('current-user', 'data')],
+    prevent_initial_call=False
 )
-def display_page_simplified(pathname, session_data, user_data):
-    """Simplified page routing without redirect loops"""
+def display_page(pathname, session_data, user_data):
+    """Display dashboard or login based on authentication"""
     
-    # Check if user is logged in
-    is_logged_in = False
+    # Check authentication using enhanced method
+    authenticated = is_authenticated(session_data, user_data)
     
-    if session_data and session_data.get('authenticated'):
-        is_logged_in = True
-    elif session_data and session_data.get('session_id'):
-        session_id = session_data.get('session_id')
-        if session_id and session_id in session_store:
-            is_logged_in = True
-    
-    # Always show login if not authenticated
-    if not is_logged_in:
+    if not authenticated:
         return get_login_layout()
     
-    # If authenticated, always show dashboard regardless of pathname
+    # For now, always show dashboard regardless of path
     return get_dashboard_layout()
 
-# BULLETPROOF login callback - minimal complexity
+# Login callback with improved session handling
 @app.callback(
     [Output('session-store', 'data'),
      Output('current-user', 'data'),
-     Output('login-alert', 'children')],
+     Output('login-alert', 'children'),
+     Output('url', 'pathname')],
     Input('login-button', 'n_clicks'),
     [State('username-input', 'value'),
-     State('password-input', 'value')],
-    prevent_initial_call=True
+     State('password-input', 'value')]
 )
-def handle_login_fixed(n_clicks, username, password):
+def handle_login(n_clicks, username, password):
     if n_clicks and username and password:
         if verify_credentials(username, password):
             session_id = generate_session_id()
             session_data = {
                 'username': username,
                 'login_time': datetime.now().isoformat(),
-                'authenticated': True,
-                'session_id': session_id
+                'authenticated': True
             }
             session_store[session_id] = session_data
             
             return (
-                session_data,  # session-store
-                session_data,  # current-user  
-                dbc.Alert("Login successful!", color="success", duration=2000)
+                {'session_id': session_id, 'authenticated': True},
+                {'username': username, 'session_id': session_id},
+                dbc.Alert("Login successful! Redirecting...", color="success"),
+                "/"
             )
         else:
             return (
+                {'authenticated': False},
                 {},
-                {},
-                dbc.Alert("Invalid credentials. Please try again.", color="danger")
+                dbc.Alert("Invalid credentials. Please try again.", color="danger"),
+                "/login"
             )
-    return {}, {}, ""
+    return {'authenticated': False}, {}, "", "/login"
 
 # Fixed logout callback with forced redirect
 @app.callback(
