@@ -977,19 +977,17 @@ def get_google_slides_layout():
     ])
 
 def get_sidebar():
-    """Simple sidebar with text labels only - no navigation buttons"""
+    """Minimal sidebar with only essential buttons"""
     return html.Div([
         html.Div("LexCura Dashboard", className="logo"),
         html.Div([
-            html.Div("Overview", className="nav-item-display"),
-            html.Div("Analytics", className="nav-item-display"),
-            html.Div("Reports", className="nav-item-display"),
-            html.Div("Google Slides", className="nav-item-display"),
-            html.Div("Archive", className="nav-item-display"),
-            html.Div("Settings", className="nav-item-display"),
+            # Only essential buttons
+            dbc.Button("PDF Reports", id="pdf-reports-btn", color="warning", size="sm",
+                      style={'width': '90%', 'margin': '10px 5%', 'background-color': COLORS['gold_primary'],
+                             'border-color': COLORS['gold_primary']}),
             html.Hr(style={'border-color': COLORS['gold_primary'], 'margin': '20px 0'}),
             dbc.Button("Logout", id="logout-btn", color="danger", size="sm",
-                      style={'width': '100%', 'margin': '0 20px'})
+                      style={'width': '90%', 'margin': '10px 5%'})
         ])
     ], className="sidebar")
 
@@ -1006,19 +1004,6 @@ def get_dashboard_layout():
         html.Div([
             get_header("Executive Business Intelligence Dashboard"),
             html.Div([
-                # Export buttons row
-                dbc.Row([
-                    dbc.Col([
-                        dbc.ButtonGroup([
-                            dbc.Button("Export PDF Report", id="export-pdf-btn", color="warning",
-                                      style={'background-color': COLORS['gold_primary'],
-                                            'border-color': COLORS['gold_primary']}),
-                            dbc.Button("Refresh Data", id="refresh-data-btn", color="secondary"),
-                            dbc.Button("Full Screen", id="fullscreen-btn", color="info")
-                        ])
-                    ])
-                ], className="mb-3"),
-                
                 # Charts Grid Container
                 html.Div([
                     # Financial Impact Chart
@@ -1188,23 +1173,25 @@ app.index_string = '''
                 text-align: center;
             }
             
-            /* Nav display items - non-clickable labels */
-            .nav-item-display {
-                color: #B8B9BB;
-                padding: 15px 20px;
-                margin: 8px 0;
-                border-radius: 8px;
+            /* PDF Reports and Logout button enhancements */
+            #pdf-reports-btn {
+                transition: all 0.3s ease;
+                border-radius: 8px !important;
                 font-weight: 500;
-                border-left: 3px solid transparent;
-                opacity: 0.7;
-                cursor: default;
+                margin: 10px 5% !important;
             }
             
-            /* Logout button enhancement */
+            #pdf-reports-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+                background-color: #FFCF66 !important;
+            }
+            
             #logout-btn {
                 transition: all 0.3s ease;
                 border-radius: 8px !important;
                 font-weight: 500;
+                margin: 10px 5% !important;
             }
             
             #logout-btn:hover {
@@ -1443,7 +1430,7 @@ def handle_login(n_clicks, username, password):
             )
     return {'authenticated': False}, {}, "", "/login"
 
-# Logout callback with better cleanup
+# Fixed logout callback
 @app.callback(
     [Output('session-store', 'data', allow_duplicate=True),
      Output('current-user', 'data', allow_duplicate=True),
@@ -1454,19 +1441,35 @@ def handle_login(n_clicks, username, password):
     prevent_initial_call=True
 )
 def handle_logout(n_clicks, session_data, user_data):
-    if n_clicks:
+    if n_clicks and n_clicks > 0:
         # Clean up session store
         if session_data and session_data.get('session_id'):
             session_id = session_data.get('session_id')
             if session_id in session_store:
                 del session_store[session_id]
         
-        # Clear all session data
+        # Clear all session data and redirect to login
         return {'authenticated': False}, {}, "/login"
     
+    # If no click, return current state
     return session_data or {'authenticated': False}, user_data or {}, "/"
 
-# Additional callbacks for reports functionality
+# PDF Reports button callback
+@app.callback(
+    Output("download-pdf", "data", allow_duplicate=True),
+    Input("pdf-reports-btn", "n_clicks"),
+    prevent_initial_call=True
+)
+def handle_pdf_reports(n_clicks):
+    if n_clicks and n_clicks > 0:
+        try:
+            pdf_buffer = generate_pdf_report()
+            if pdf_buffer:
+                return dcc.send_bytes(pdf_buffer.getvalue(), 
+                                    filename=f"LexCura_Dashboard_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf")
+        except Exception as e:
+            print(f"Error generating PDF: {str(e)}")
+    return None
 @app.callback(
     Output("download-pdf", "data", allow_duplicate=True),
     [Input("exec-summary-btn", "n_clicks"),
