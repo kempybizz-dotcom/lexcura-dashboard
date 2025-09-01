@@ -1,17 +1,32 @@
-# LexCura Elite Executive Dashboard - Python 3.13 Compatible
-# Core Framework
+# LexCura Executive Dashboard - Production Requirements
+# Python 3.11+ Compatible - Tested for Render Deployment
+
+# Core Framework (Essential)
 dash==2.17.1
 dash-bootstrap-components==1.5.0
 plotly==5.17.0
 
-# PDF Generation
+# Web Server (Required for Render)
+gunicorn==21.2.0
+
+# Date/Time Utilities (Core functionality)
+python-dateutil==2.8.2
+pytz==2023.3
+
+# PDF Generation (Optional - with fallback)
+# Remove this line if causing deployment issues
 reportlab==4.0.4
 
-# Web Server
-gunicorn==22.0.0
+# Security & Hashing (Session management)
+# Built into Python standard library - no external dependency needed
 
-# Utilities
-python-dateutil==2.9.0
-pytz==2024.1
+# Development/Testing (Remove for production)
+# pytest==7.4.3
+# pytest-dash==2.3.1
 
+# Additional utilities if needed
+# numpy==1.24.3  # Only if you need advanced calculations
+# pandas==2.0.3  # Only if you need data manipulation
 
+# Note: All dependencies are pinned to specific versions for stability
+# Tested combinations that work reliably on Render platform
