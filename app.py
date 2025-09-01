@@ -1420,7 +1420,7 @@ app.index_string = '''
                 }
             }
             
-            /* Elite sidebar enhancements */
+            /* CRITICAL LAYOUT FIXES */
             .sidebar {
                 background: linear-gradient(180deg, 
                     rgba(27, 29, 31, 0.95) 0%, 
@@ -1430,6 +1430,109 @@ app.index_string = '''
                 box-shadow: 
                     4px 0 30px rgba(0, 0, 0, 0.5),
                     inset -1px 0 0 rgba(212, 175, 55, 0.2);
+                height: 100vh;
+                position: fixed;
+                width: 280px;
+                padding: 20px 15px;
+                z-index: 1000;
+                overflow-y: auto;
+            }
+            
+            .main-content {
+                margin-left: 280px !important;
+                padding: 20px !important;
+                min-height: 100vh;
+                width: calc(100vw - 280px) !important;
+            }
+            
+            .chart-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+                width: 100%;
+            }
+            
+            /* Fix header layout */
+            .elite-header {
+                background: linear-gradient(135deg, #1B1D1F 0%, #2A2D30 50%, #1B1D1F 100%);
+                border: 2px solid #D4AF37;
+                border-radius: 20px;
+                padding: 20px;
+                margin-bottom: 25px;
+                box-shadow: 
+                    0 0 50px rgba(212, 175, 55, 0.2),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                position: relative;
+                overflow: hidden;
+                width: 100%;
+            }
+            
+            /* Fix KPI cards layout */
+            .elite-kpi-container {
+                width: 100%;
+            }
+            
+            .elite-mini-card {
+                background: linear-gradient(145deg, 
+                    rgba(27, 29, 31, 0.9) 0%, 
+                    rgba(42, 45, 48, 0.9) 100%) !important;
+                border: 1px solid rgba(212, 175, 55, 0.3) !important;
+                border-radius: 12px !important;
+                backdrop-filter: blur(20px);
+                box-shadow: 
+                    0 6px 20px rgba(0, 0, 0, 0.4),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                transition: all 0.3s ease !important;
+                height: 100%;
+            }
+            
+            .elite-mini-card:hover {
+                transform: translateY(-5px) !important;
+                border-color: rgba(212, 175, 55, 0.6) !important;
+                box-shadow: 
+                    0 12px 35px rgba(0, 0, 0, 0.6),
+                    0 0 20px rgba(212, 175, 55, 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            }
+            
+            .elite-kpi-card {
+                padding: 15px 12px !important;
+                text-align: center;
+            }
+            
+            /* Button fixes */
+            .sidebar-btn {
+                transition: all 0.3s ease !important;
+                border-radius: 8px !important;
+                font-weight: 500 !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+                border: none !important;
+                width: 100% !important;
+                margin-bottom: 8px !important;
+            }
+            
+            .sidebar-btn:hover {
+                transform: translateY(-2px) scale(1.02) !important;
+                box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
+            }
+            
+            /* Card fixes */
+            .chart-grid .card {
+                background: linear-gradient(145deg, 
+                    rgba(27, 29, 31, 0.95) 0%, 
+                    rgba(37, 40, 48, 0.95) 100%);
+                backdrop-filter: blur(15px);
+                border: 2px solid rgba(212, 175, 55, 0.2);
+                border-radius: 15px;
+                box-shadow: 
+                    0 10px 30px rgba(0, 0, 0, 0.4),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                position: relative;
+                margin: 0;
+                padding: 20px;
+                height: auto;
+                min-height: 450px;
             }
             
             .logo-enhanced {
