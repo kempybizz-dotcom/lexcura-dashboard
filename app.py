@@ -1,16 +1,37 @@
 import dash
-from dash import dcc, html, Input, Output, callback
+from dash import dcc, html, Input, Output, callback, State, ALL
+import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import random
 import math
 import os
+import json
+import hashlib
+import base64
+from urllib.parse import parse_qs
+import io
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.colors import HexColor
+import plotly.io as pio
 
-# Initialize the Dash app
-app = dash.Dash(__name__, suppress_callback_exceptions=True)
-server = app.server  # Required for Render deployment
+# Initialize the Dash app with Bootstrap theme
+app = dash.Dash(__name__, 
+                external_stylesheets=[dbc.themes.BOOTSTRAP],
+                suppress_callback_exceptions=True,
+                meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 
-# Color palette - strictly enforced
+server = app.server
+
+# Authentication configuration
+USERS = {
+    "admin": "dashboard2024",  # Simple test credentials
+    "client": "lexcura2024"    # Client credentials
+}
+
+# Color palette
 COLORS = {
     'charcoal': '#0F1113',
     'dark_grey': '#1B1D1F',
@@ -22,50 +43,59 @@ COLORS = {
     'warning_orange': '#F4A261'
 }
 
-# Generate sample data using pure Python (no pandas/numpy)
+# Session store for authentication
+session_store = {}
+
+def generate_session_id():
+    """Generate a secure session ID"""
+    return hashlib.sha256(str(random.random()).encode()).hexdigest()
+
+def verify_credentials(username, password):
+    """Verify user credentials"""
+    return USERS.get(username) == password
+
+def is_authenticated(session_id):
+    """Check if session is authenticated"""
+    return session_id in session_store
+
+# Enhanced data generation with better error handling
 def generate_sample_data():
     try:
-        # Set random seed for consistent data
         random.seed(42)
         
-        # 1. Financial Impact data
+        # Financial data
         financial_data = {
             'categories': ['Revenue', 'Operating Costs', 'Net Profit', 'Investments', 'Returns'],
             'current': [2850000, -1320000, 1530000, -480000, 720000],
             'previous': [2600000, -1450000, 1150000, -520000, 580000]
         }
         
-        # 2. Deadline Tracker data
+        # Deadline data
         deadline_data = {
-            'tasks': ['Q4 Financial Report', 'System Infrastructure Upgrade', 'Compliance Audit Review', 'Annual Budget Planning', 'Security Assessment'],
+            'tasks': ['Q4 Financial Report', 'Infrastructure Upgrade', 'Compliance Audit', 'Budget Planning', 'Security Assessment'],
             'days_left': [3, 15, 1, 12, 8],
             'progress': [85, 45, 95, 60, 70]
         }
-        # Add urgency status based on days left
         deadline_data['urgency'] = ['Critical' if d <= 3 else 'Warning' if d <= 7 else 'Normal' for d in deadline_data['days_left']]
         
-        # 3. Alert Severity data
+        # Alert data
         alert_data = {
             'severity': ['Critical', 'Warning', 'Info'],
             'count': [8, 24, 42]
         }
         
-        # 4. Historical Trends data (last 365 days)
+        # Historical data
         end_date = datetime.now()
         start_date = end_date - timedelta(days=365)
-        
-        # Generate dates
         historical_dates = []
         current_date = start_date
         while current_date <= end_date:
             historical_dates.append(current_date)
             current_date += timedelta(days=1)
         
-        # Generate realistic trending data
         base_value = 1000
         historical_performance = []
         for i, date in enumerate(historical_dates):
-            # Add trend, seasonality, and noise
             trend = (i / len(historical_dates)) * 200
             seasonal = 100 * math.sin(2 * math.pi * i / 365)
             noise = random.uniform(-50, 50)
@@ -78,14 +108,14 @@ def generate_sample_data():
             'target': 1200
         }
         
-        # 5. Growth vs Decline data
+        # Growth data
         growth_data = {
             'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
             'growth_rate': [12, 18, 15, 22, 28, 25, 30, 35],
             'decline_rate': [5, 8, 4, 6, 9, 7, 8, 6]
         }
         
-        # 6. Performance KPIs data
+        # Performance data
         performance_data = {
             'kpis': ['Operational Efficiency', 'Quality Score', 'Response Time', 'Cost Optimization', 'Customer Satisfaction'],
             'current_score': [85, 92, 78, 88, 91],
@@ -93,10 +123,9 @@ def generate_sample_data():
             'industry_avg': [75, 85, 80, 82, 87]
         }
         
-        # 7. Risk score (single value for gauge)
-        risk_score = 68  # Out of 100 (lower is better)
+        risk_score = 68
         
-        # 8. Projection & Forecast data (next 12 months)
+        # Projection data
         future_dates = []
         current_month = datetime.now().replace(day=1)
         for i in range(12):
@@ -121,6 +150,28 @@ def generate_sample_data():
             'upper_confidence': upper_confidence
         }
         
+        # Google Slides archive data (mock)
+        archive_data = [
+            {
+                'date': '2024-12-01',
+                'title': 'Q4 Executive Summary',
+                'url': 'https://docs.google.com/presentation/d/1example1/edit',
+                'thumbnail': '/assets/slide_thumb_1.png'
+            },
+            {
+                'date': '2024-11-15',
+                'title': 'November Performance Review',
+                'url': 'https://docs.google.com/presentation/d/1example2/edit',
+                'thumbnail': '/assets/slide_thumb_2.png'
+            },
+            {
+                'date': '2024-11-01',
+                'title': 'Monthly Financial Report',
+                'url': 'https://docs.google.com/presentation/d/1example3/edit',
+                'thumbnail': '/assets/slide_thumb_3.png'
+            }
+        ]
+        
         return {
             'financial': financial_data,
             'deadlines': deadline_data,
@@ -129,12 +180,13 @@ def generate_sample_data():
             'growth': growth_data,
             'performance': performance_data,
             'risk_score': risk_score,
-            'projections': projection_data
+            'projections': projection_data,
+            'archive': archive_data
         }
         
     except Exception as e:
-        print(f"Error generating sample data: {str(e)}")
-        # Return minimal fallback data
+        print(f"Critical error in data generation: {str(e)}")
+        # Minimal fallback data
         return {
             'financial': {'categories': ['Revenue'], 'current': [1000000], 'previous': [900000]},
             'deadlines': {'tasks': ['Sample Task'], 'days_left': [5], 'progress': [50], 'urgency': ['Normal']},
@@ -143,13 +195,13 @@ def generate_sample_data():
             'growth': {'months': ['Jan'], 'growth_rate': [15], 'decline_rate': [5]},
             'performance': {'kpis': ['Performance'], 'current_score': [80], 'target_score': [90], 'industry_avg': [75]},
             'risk_score': 70,
-            'projections': {'dates': [datetime.now()], 'forecast': [1500], 'lower_confidence': [1400], 'upper_confidence': [1600]}
+            'projections': {'dates': [datetime.now()], 'forecast': [1500], 'lower_confidence': [1400], 'upper_confidence': [1600]},
+            'archive': []
         }
 
 # Initialize data
 data = generate_sample_data()
 
-# Common chart layout template
 def get_base_layout(title):
     return {
         'title': {
@@ -173,12 +225,11 @@ def get_base_layout(title):
         'yaxis': {'color': COLORS['neutral_text'], 'gridcolor': '#2A2D30'}
     }
 
-# Chart 1: Financial Impact Bar Chart
+# Chart creation functions with enhanced error handling
 def create_financial_chart():
     try:
         fig = go.Figure()
         
-        # Current period bars
         colors_current = [COLORS['success_green'] if x > 0 else COLORS['danger_red'] for x in data['financial']['current']]
         
         fig.add_trace(go.Bar(
@@ -191,7 +242,6 @@ def create_financial_chart():
             textposition='outside'
         ))
         
-        # Previous period bars
         fig.add_trace(go.Bar(
             x=data['financial']['categories'],
             y=data['financial']['previous'],
@@ -208,10 +258,12 @@ def create_financial_chart():
         fig.update_layout(layout)
         return fig
     except Exception as e:
-        print(f"Error creating financial chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+        print(f"Error in financial chart: {str(e)}")
+        fig = go.Figure()
+        fig.add_annotation(text="Financial Chart Error - Please Refresh", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(get_base_layout('Financial Impact Analysis'))
+        return fig
 
-# Chart 2: Deadline Tracker Horizontal Timeline
 def create_deadline_chart():
     try:
         urgency_colors = {
@@ -222,7 +274,7 @@ def create_deadline_chart():
         
         fig = go.Figure()
         
-        colors = [urgency_colors[urgency] for urgency in data['deadlines']['urgency']]
+        colors = [urgency_colors.get(urgency, COLORS['neutral_text']) for urgency in data['deadlines']['urgency']]
         
         fig.add_trace(go.Bar(
             x=data['deadlines']['days_left'],
@@ -242,10 +294,12 @@ def create_deadline_chart():
         fig.update_layout(layout)
         return fig
     except Exception as e:
-        print(f"Error creating deadline chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+        print(f"Error in deadline chart: {str(e)}")
+        fig = go.Figure()
+        fig.add_annotation(text="Deadline Chart Error - Please Refresh", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(get_base_layout('Project Deadline Tracker'))
+        return fig
 
-# Chart 3: Alert Severity Donut Chart
 def create_alert_chart():
     try:
         severity_colors = [COLORS['danger_red'], COLORS['warning_orange'], COLORS['success_green']]
@@ -260,7 +314,6 @@ def create_alert_chart():
             textfont={'color': 'white', 'size': 12}
         ))
         
-        # Add center annotation
         total_alerts = sum(data['alerts']['count'])
         fig.add_annotation(
             text=f"Total<br><b>{total_alerts}</b><br>Alerts",
@@ -275,15 +328,16 @@ def create_alert_chart():
         fig.update_layout(layout)
         return fig
     except Exception as e:
-        print(f"Error creating alert chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+        print(f"Error in alert chart: {str(e)}")
+        fig = go.Figure()
+        fig.add_annotation(text="Alert Chart Error - Please Refresh", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(get_base_layout('Alert Severity Distribution'))
+        return fig
 
-# Chart 4: Historical Trends Area Chart
 def create_historical_chart():
     try:
         fig = go.Figure()
         
-        # Performance area chart
         fig.add_trace(go.Scatter(
             x=data['historical']['dates'],
             y=data['historical']['performance'],
@@ -295,7 +349,6 @@ def create_historical_chart():
             hovertemplate='<b>%{x|%Y-%m-%d}</b><br>Performance: %{y:,.1f}<extra></extra>'
         ))
         
-        # Target line
         fig.add_hline(
             y=data['historical']['target'],
             line_dash="dash",
@@ -312,15 +365,16 @@ def create_historical_chart():
         fig.update_layout(layout)
         return fig
     except Exception as e:
-        print(f"Error creating historical chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+        print(f"Error in historical chart: {str(e)}")
+        fig = go.Figure()
+        fig.add_annotation(text="Historical Chart Error - Please Refresh", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(get_base_layout('Historical Performance Trends'))
+        return fig
 
-# Chart 5: Growth vs Decline Stacked Analysis
 def create_growth_chart():
     try:
         fig = go.Figure()
         
-        # Growth bars
         fig.add_trace(go.Bar(
             x=data['growth']['months'],
             y=data['growth']['growth_rate'],
@@ -331,7 +385,6 @@ def create_growth_chart():
             textposition='outside'
         ))
         
-        # Decline bars (negative values)
         decline_negative = [-rate for rate in data['growth']['decline_rate']]
         fig.add_trace(go.Bar(
             x=data['growth']['months'],
@@ -351,15 +404,16 @@ def create_growth_chart():
         fig.update_layout(layout)
         return fig
     except Exception as e:
-        print(f"Error creating growth chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+        print(f"Error in growth chart: {str(e)}")
+        fig = go.Figure()
+        fig.add_annotation(text="Growth Chart Error - Please Refresh", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(get_base_layout('Growth vs Decline Analysis'))
+        return fig
 
-# Chart 6: Performance Comparison Radar Chart
 def create_performance_chart():
     try:
         fig = go.Figure()
         
-        # Current performance
         fig.add_trace(go.Scatterpolar(
             r=data['performance']['current_score'],
             theta=data['performance']['kpis'],
@@ -370,7 +424,6 @@ def create_performance_chart():
             hovertemplate='<b>%{theta}</b><br>Current: %{r}%<extra></extra>'
         ))
         
-        # Target performance
         fig.add_trace(go.Scatterpolar(
             r=data['performance']['target_score'],
             theta=data['performance']['kpis'],
@@ -381,7 +434,6 @@ def create_performance_chart():
             hovertemplate='<b>%{theta}</b><br>Target: %{r}%<extra></extra>'
         ))
         
-        # Industry average
         fig.add_trace(go.Scatterpolar(
             r=data['performance']['industry_avg'],
             theta=data['performance']['kpis'],
@@ -406,13 +458,14 @@ def create_performance_chart():
         fig.update_layout(layout)
         return fig
     except Exception as e:
-        print(f"Error creating performance chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+        print(f"Error in performance chart: {str(e)}")
+        fig = go.Figure()
+        fig.add_annotation(text="Performance Chart Error - Please Refresh", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(get_base_layout('Performance vs Target KPIs'))
+        return fig
 
-# Chart 7: Risk & Compliance Gauge
 def create_risk_gauge():
     try:
-        # Determine gauge color based on risk score
         if data['risk_score'] <= 30:
             gauge_color = COLORS['success_green']
         elif data['risk_score'] <= 70:
@@ -461,15 +514,21 @@ def create_risk_gauge():
         
         return fig
     except Exception as e:
-        print(f"Error creating risk gauge: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+        print(f"Error in risk gauge: {str(e)}")
+        fig = go.Figure()
+        fig.add_annotation(text="Risk Gauge Error - Please Refresh", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(
+            paper_bgcolor=COLORS['charcoal'],
+            plot_bgcolor=COLORS['charcoal'],
+            font={'color': COLORS['neutral_text'], 'family': 'Inter'},
+            height=400
+        )
+        return fig
 
-# Chart 8: Projection & Forecast with Confidence Bands
 def create_projection_chart():
     try:
         fig = go.Figure()
         
-        # Upper confidence bound (invisible, for fill)
         fig.add_trace(go.Scatter(
             x=data['projections']['dates'],
             y=data['projections']['upper_confidence'],
@@ -480,7 +539,6 @@ def create_projection_chart():
             name='Upper Bound'
         ))
         
-        # Lower confidence bound with fill
         fig.add_trace(go.Scatter(
             x=data['projections']['dates'],
             y=data['projections']['lower_confidence'],
@@ -493,7 +551,6 @@ def create_projection_chart():
             customdata=data['projections']['upper_confidence']
         ))
         
-        # Main forecast line
         fig.add_trace(go.Scatter(
             x=data['projections']['dates'],
             y=data['projections']['forecast'],
@@ -512,10 +569,348 @@ def create_projection_chart():
         fig.update_layout(layout)
         return fig
     except Exception as e:
-        print(f"Error creating projection chart: {str(e)}")
-        return go.Figure().add_annotation(text="Chart Loading Error", x=0.5, y=0.5)
+        print(f"Error in projection chart: {str(e)}")
+        fig = go.Figure()
+        fig.add_annotation(text="Projection Chart Error - Please Refresh", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(get_base_layout('12-Month Revenue Projection'))
+        return fig
 
-# Enhanced CSS with better responsive design
+# PDF Report Generation
+def generate_pdf_report():
+    """Generate a PDF report of dashboard data"""
+    try:
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # Title
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            spaceAfter=30,
+            textColor=HexColor('#D4AF37')
+        )
+        story.append(Paragraph("LexCura Executive Dashboard Report", title_style))
+        story.append(Spacer(1, 20))
+        
+        # Date
+        story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+        story.append(Spacer(1, 30))
+        
+        # Financial Summary
+        story.append(Paragraph("Financial Summary", styles['Heading2']))
+        financial_data_table = [
+            ['Category', 'Current Period', 'Previous Period', 'Change'],
+            ['Revenue', f"${data['financial']['current'][0]:,.0f}", f"${data['financial']['previous'][0]:,.0f}", 
+             f"{((data['financial']['current'][0] - data['financial']['previous'][0]) / data['financial']['previous'][0] * 100):.1f}%"]
+        ]
+        
+        table = Table(financial_data_table)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#D4AF37')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#0F1113')),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), HexColor('#F5F5F5')),
+            ('GRID', (0, 0), (-1, -1), 1, HexColor('#CCCCCC'))
+        ]))
+        
+        story.append(table)
+        story.append(Spacer(1, 20))
+        
+        # Risk Score
+        story.append(Paragraph("Risk Assessment", styles['Heading2']))
+        story.append(Paragraph(f"Current Risk Score: {data['risk_score']}/100", styles['Normal']))
+        
+        doc.build(story)
+        buffer.seek(0)
+        return buffer
+        
+    except Exception as e:
+        print(f"Error generating PDF: {str(e)}")
+        return None
+
+# Login page layout
+def get_login_layout():
+    return dbc.Container([
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.Div([
+                            html.H2("LexCura Dashboard", className="text-center mb-4", 
+                                   style={'color': COLORS['gold_primary'], 'font-weight': 'bold'}),
+                            html.Hr(),
+                            dbc.Form([
+                                dbc.Row([
+                                    dbc.Label("Username", html_for="username-input"),
+                                    dbc.Input(id="username-input", type="text", placeholder="Enter username"),
+                                ], className="mb-3"),
+                                dbc.Row([
+                                    dbc.Label("Password", html_for="password-input"),
+                                    dbc.Input(id="password-input", type="password", placeholder="Enter password"),
+                                ], className="mb-3"),
+                                dbc.Row([
+                                    dbc.Col([
+                                        dbc.Button("Login", id="login-button", color="warning", 
+                                                 className="w-100", style={'background-color': COLORS['gold_primary'],
+                                                                          'border-color': COLORS['gold_primary']})
+                                    ])
+                                ])
+                            ]),
+                            html.Div(id="login-alert", className="mt-3")
+                        ])
+                    ])
+                ], style={'background-color': COLORS['dark_grey'], 'border': f'2px solid {COLORS["gold_primary"]}'}),
+            ], width=6, lg=4)
+        ], justify="center", className="min-vh-100 align-items-center"),
+        dcc.Store(id='session-store')
+    ], fluid=True, style={'background-color': COLORS['charcoal']})
+
+# Archive page layout
+def get_archive_layout():
+    archive_cards = []
+    for item in data['archive']:
+        card = dbc.Card([
+            dbc.CardImg(src="/assets/lexcura_logo.png", top=True, style={'height': '200px', 'object-fit': 'cover'}),
+            dbc.CardBody([
+                html.H5(item['title'], className="card-title"),
+                html.P(f"Created: {item['date']}", className="card-text text-muted"),
+                dbc.Button("Open Presentation", href=item['url'], target="_blank", 
+                          color="warning", style={'background-color': COLORS['gold_primary'],
+                                                'border-color': COLORS['gold_primary']})
+            ])
+        ], style={'background-color': COLORS['dark_grey'], 'border': f'1px solid {COLORS["gold_primary"]}',
+                 'margin-bottom': '20px'})
+        archive_cards.append(dbc.Col(card, width=12, md=6, lg=4))
+    
+    return html.Div([
+        get_sidebar(),
+        html.Div([
+            get_header("Archive - Historical Reports"),
+            dbc.Container([
+                dbc.Row([
+                    dbc.Col([
+                        html.H3("Google Slides Archive", style={'color': COLORS['gold_primary']}),
+                        html.P("Access all historical presentation reports", style={'color': COLORS['neutral_text']}),
+                        html.Hr(style={'border-color': COLORS['gold_primary']}),
+                        dbc.Row(archive_cards)
+                    ])
+                ])
+            ], fluid=True)
+        ], className="main-content", style={'margin-left': '280px', 'padding': '20px'})
+    ])
+
+# Google Slides integration layout
+def get_google_slides_layout():
+    return html.Div([
+        get_sidebar(),
+        html.Div([
+            get_header("Live Google Slides"),
+            dbc.Container([
+                dbc.Row([
+                    dbc.Col([
+                        html.H3("Current Presentation", style={'color': COLORS['gold_primary']}),
+                        html.P("View and interact with the latest presentation", style={'color': COLORS['neutral_text']}),
+                        html.Hr(style={'border-color': COLORS['gold_primary']}),
+                        html.Div([
+                            html.Iframe(
+                                src="https://docs.google.com/presentation/d/e/YOUR_PRESENTATION_ID/embed?start=false&loop=false&delayms=3000",
+                                style={
+                                    'width': '100%',
+                                    'height': '600px',
+                                    'border': f'2px solid {COLORS["gold_primary"]}',
+                                    'border-radius': '10px'
+                                }
+                            )
+                        ]),
+                        html.Br(),
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Button("Open in New Tab", id="open-slides-btn", color="warning",
+                                          style={'background-color': COLORS['gold_primary'],
+                                                'border-color': COLORS['gold_primary']})
+                            ], width=6),
+                            dbc.Col([
+                                dbc.Button("Download PDF", id="download-slides-btn", color="secondary")
+                            ], width=6)
+                        ])
+                    ])
+                ])
+            ], fluid=True)
+        ], className="main-content", style={'margin-left': '280px', 'padding': '20px'})
+    ])
+
+def get_sidebar():
+    return html.Div([
+        html.Div("LexCura Dashboard", className="logo"),
+        html.Div([
+            html.Div("Overview", id="nav-overview", className="nav-item", n_clicks=0),
+            html.Div("Analytics", id="nav-analytics", className="nav-item", n_clicks=0),
+            html.Div("Reports", id="nav-reports", className="nav-item", n_clicks=0),
+            html.Div("Google Slides", id="nav-slides", className="nav-item", n_clicks=0),
+            html.Div("Archive", id="nav-archive", className="nav-item", n_clicks=0),
+            html.Div("Settings", id="nav-settings", className="nav-item", n_clicks=0),
+            html.Hr(style={'border-color': COLORS['gold_primary'], 'margin': '20px 0'}),
+            html.Div("Logout", id="logout-btn", className="nav-item", n_clicks=0,
+                    style={'color': COLORS['danger_red']})
+        ])
+    ], className="sidebar")
+
+def get_header(title):
+    return html.Div([
+        html.H1(title),
+        html.P(f"Last Updated: {datetime.now().strftime('%A, %B %d, %Y at %I:%M %p')}")
+    ], className="header")
+
+# Main dashboard layout
+def get_dashboard_layout():
+    return html.Div([
+        get_sidebar(),
+        html.Div([
+            get_header("Executive Business Intelligence Dashboard"),
+            html.Div([
+                # Export buttons row
+                dbc.Row([
+                    dbc.Col([
+                        dbc.ButtonGroup([
+                            dbc.Button("Export PDF Report", id="export-pdf-btn", color="warning",
+                                      style={'background-color': COLORS['gold_primary'],
+                                            'border-color': COLORS['gold_primary']}),
+                            dbc.Button("Refresh Data", id="refresh-data-btn", color="secondary"),
+                            dbc.Button("Full Screen", id="fullscreen-btn", color="info")
+                        ])
+                    ])
+                ], className="mb-3"),
+                
+                # Charts Grid Container
+                html.Div([
+                    # Financial Impact Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='financial-impact-chart',
+                                figure=create_financial_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Deadline Tracker Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='deadline-tracker-chart',
+                                figure=create_deadline_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Alert Severity Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='alert-severity-chart',
+                                figure=create_alert_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Historical Trends Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='historical-trends-chart',
+                                figure=create_historical_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Growth vs Decline Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='growth-decline-chart',
+                                figure=create_growth_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Performance Comparison Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='performance-comparison-chart',
+                                figure=create_performance_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Risk & Compliance Gauge
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='risk-compliance-gauge',
+                                figure=create_risk_gauge(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                    # Projection & Forecast Chart
+                    html.Div([
+                        dcc.Loading([
+                            dcc.Graph(
+                                id='projection-forecast-chart',
+                                figure=create_projection_chart(),
+                                config={'displayModeBar': False, 'responsive': True},
+                                style={'height': '420px'}
+                            )
+                        ], color=COLORS['gold_primary'])
+                    ], className="card"),
+                    
+                ], className="chart-grid"),
+                
+                # Status indicator - NO EMOJIS
+                html.Div([
+                    html.Div(id='status-indicator', children=[
+                        html.Span("● ", style={'color': COLORS['success_green'], 'font-size': '20px'}),
+                        html.Span("System Online", style={'color': COLORS['neutral_text']})
+                    ], style={'text-align': 'center', 'padding': '20px', 'font-size': '14px'})
+                ])
+                
+            ], id="dashboard-content"),
+            
+            # Auto-refresh interval component
+            dcc.Interval(
+                id='auto-refresh-interval',
+                interval=300000,  # 5 minutes
+                n_intervals=0
+            ),
+            
+            # Download component for PDF
+            dcc.Download(id="download-pdf")
+            
+        ], className="main-content", style={'margin-left': '280px', 'padding': '20px'})
+    ])
+
+# Enhanced CSS
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -579,9 +974,13 @@ app.index_string = '''
                 transform: translateX(5px);
             }
             
+            .nav-item.active {
+                background-color: rgba(212, 175, 55, 0.2);
+                color: #FFCF66;
+                border-left-color: #D4AF37;
+            }
+            
             .main-content {
-                margin-left: 280px;
-                padding: 20px;
                 min-height: 100vh;
             }
             
@@ -643,6 +1042,11 @@ app.index_string = '''
                 margin-top: 20px;
             }
             
+            /* Loading spinner customization */
+            ._dash-loading {
+                color: #D4AF37 !important;
+            }
+            
             /* Mobile responsive */
             @media (max-width: 1200px) {
                 .chart-grid {
@@ -657,32 +1061,13 @@ app.index_string = '''
                 }
                 
                 .main-content {
-                    margin-left: 0;
-                    padding: 15px;
+                    margin-left: 0 !important;
+                    padding: 15px !important;
                 }
                 
                 .chart-grid {
                     grid-template-columns: 1fr;
                     gap: 15px;
-                }
-                
-                .card {
-                    margin: 8px;
-                    padding: 20px;
-                }
-                
-                .header h1 {
-                    font-size: 24px;
-                }
-            }
-            
-            @media (max-width: 600px) {
-                .header {
-                    padding: 20px;
-                }
-                
-                .card {
-                    padding: 15px;
                 }
             }
             
@@ -699,10 +1084,6 @@ app.index_string = '''
                 background: #D4AF37;
                 border-radius: 4px;
             }
-            
-            ::-webkit-scrollbar-thumb:hover {
-                background: #FFCF66;
-            }
         </style>
     </head>
     <body>
@@ -716,131 +1097,119 @@ app.index_string = '''
 </html>
 '''
 
-# Main app layout
+# Main app layout with URL routing
 app.layout = html.Div([
-    # Sidebar Navigation
-    html.Div([
-        html.Div("LexCura Dashboard", className="logo"),
-        html.Div([
-            html.Div("Overview", className="nav-item"),
-            html.Div("Analytics", className="nav-item"),
-            html.Div("Reports", className="nav-item"),
-            html.Div("Settings", className="nav-item"),
-            html.Div("Security", className="nav-item"),
-        ])
-    ], className="sidebar"),
-    
-    # Main Content Area
-    html.Div([
-        # Header Section
-        html.Div([
-            html.H1("Executive Business Intelligence Dashboard"),
-            html.P(f"Last Updated: {datetime.now().strftime('%A, %B %d, %Y at %I:%M %p')}")
-        ], className="header"),
-        
-        # Charts Grid Container
-        html.Div([
-            # Financial Impact Chart
-            html.Div([
-                dcc.Graph(
-                    id='financial-impact-chart',
-                    figure=create_financial_chart(),
-                    config={'displayModeBar': False, 'responsive': True},
-                    style={'height': '420px'}
-                )
-            ], className="card"),
-            
-            # Deadline Tracker Chart
-            html.Div([
-                dcc.Graph(
-                    id='deadline-tracker-chart',
-                    figure=create_deadline_chart(),
-                    config={'displayModeBar': False, 'responsive': True},
-                    style={'height': '420px'}
-                )
-            ], className="card"),
-            
-            # Alert Severity Chart
-            html.Div([
-                dcc.Graph(
-                    id='alert-severity-chart',
-                    figure=create_alert_chart(),
-                    config={'displayModeBar': False, 'responsive': True},
-                    style={'height': '420px'}
-                )
-            ], className="card"),
-            
-            # Historical Trends Chart
-            html.Div([
-                dcc.Graph(
-                    id='historical-trends-chart',
-                    figure=create_historical_chart(),
-                    config={'displayModeBar': False, 'responsive': True},
-                    style={'height': '420px'}
-                )
-            ], className="card"),
-            
-            # Growth vs Decline Chart
-            html.Div([
-                dcc.Graph(
-                    id='growth-decline-chart',
-                    figure=create_growth_chart(),
-                    config={'displayModeBar': False, 'responsive': True},
-                    style={'height': '420px'}
-                )
-            ], className="card"),
-            
-            # Performance Comparison Chart
-            html.Div([
-                dcc.Graph(
-                    id='performance-comparison-chart',
-                    figure=create_performance_chart(),
-                    config={'displayModeBar': False, 'responsive': True},
-                    style={'height': '420px'}
-                )
-            ], className="card"),
-            
-            # Risk & Compliance Gauge
-            html.Div([
-                dcc.Graph(
-                    id='risk-compliance-gauge',
-                    figure=create_risk_gauge(),
-                    config={'displayModeBar': False, 'responsive': True},
-                    style={'height': '420px'}
-                )
-            ], className="card"),
-            
-            # Projection & Forecast Chart
-            html.Div([
-                dcc.Graph(
-                    id='projection-forecast-chart',
-                    figure=create_projection_chart(),
-                    config={'displayModeBar': False, 'responsive': True},
-                    style={'height': '420px'}
-                )
-            ], className="card"),
-            
-        ], className="chart-grid"),
-        
-        # Auto-refresh interval component
-        dcc.Interval(
-            id='auto-refresh-interval',
-            interval=300000,  # 5 minutes in milliseconds
-            n_intervals=0
-        ),
-        
-        # Status indicator
-        html.Div([
-            html.Div(id='status-indicator', children=[
-                html.Span("🟢 ", style={'color': COLORS['success_green']}),
-                html.Span("System Online", style={'color': COLORS['neutral_text']})
-            ], style={'text-align': 'center', 'padding': '20px', 'font-size': '14px'})
-        ])
-        
-    ], className="main-content")
+    dcc.Location(id='url', refresh=False),
+    dcc.Store(id='session-store', storage_type='session'),
+    html.Div(id='page-content')
 ])
 
-# Callback for auto-refresh functionality
+# Callback for page routing and authentication
+@app.callback(
+    Output('page-content', 'children'),
+    Input('url', 'pathname'),
+    State('session-store', 'data')
+)
+def display_page(pathname, session_data):
+    session_id = session_data.get('session_id') if session_data else None
+    
+    # Check authentication
+    if not session_id or not is_authenticated(session_id):
+        return get_login_layout()
+    
+    # Route to appropriate page
+    if pathname == '/archive':
+        return get_archive_layout()
+    elif pathname == '/slides':
+        return get_google_slides_layout()
+    elif pathname == '/analytics':
+        return get_dashboard_layout()  # For now, same as overview
+    elif pathname == '/reports':
+        return get_dashboard_layout()  # For now, same as overview
+    elif pathname == '/settings':
+        return get_dashboard_layout()  # For now, same as overview
+    else:
+        return get_dashboard_layout()
+
+# Login callback
+@app.callback(
+    [Output('session-store', 'data'),
+     Output('login-alert', 'children'),
+     Output('url', 'pathname')],
+    Input('login-button', 'n_clicks'),
+    [State('username-input', 'value'),
+     State('password-input', 'value')]
+)
+def handle_login(n_clicks, username, password):
+    if n_clicks and username and password:
+        if verify_credentials(username, password):
+            session_id = generate_session_id()
+            session_store[session_id] = {
+                'username': username,
+                'login_time': datetime.now()
+            }
+            return (
+                {'session_id': session_id, 'username': username},
+                dbc.Alert("Login successful!", color="success"),
+                "/"
+            )
+        else:
+            return (
+                {},
+                dbc.Alert("Invalid credentials. Please try again.", color="danger"),
+                "/login"
+            )
+    return {}, "", "/login"
+
+# Logout callback
+@app.callback(
+    [Output('session-store', 'data', allow_duplicate=True),
+     Output('url', 'pathname', allow_duplicate=True)],
+    Input('logout-btn', 'n_clicks'),
+    State('session-store', 'data'),
+    prevent_initial_call=True
+)
+def handle_logout(n_clicks, session_data):
+    if n_clicks and session_data:
+        session_id = session_data.get('session_id')
+        if session_id in session_store:
+            del session_store[session_id]
+    return {}, "/login"
+
+# Navigation callbacks
+@app.callback(
+    Output('url', 'pathname', allow_duplicate=True),
+    [Input('nav-overview', 'n_clicks'),
+     Input('nav-analytics', 'n_clicks'),
+     Input('nav-reports', 'n_clicks'),
+     Input('nav-slides', 'n_clicks'),
+     Input('nav-archive', 'n_clicks'),
+     Input('nav-settings', 'n_clicks')],
+    prevent_initial_call=True
+)
+def handle_navigation(overview, analytics, reports, slides, archive, settings):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return "/"
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if button_id == 'nav-overview':
+        return "/"
+    elif button_id == 'nav-analytics':
+        return "/analytics"
+    elif button_id == 'nav-reports':
+        return "/reports"
+    elif button_id == 'nav-slides':
+        return "/slides"
+    elif button_id == 'nav-archive':
+        return "/archive"
+    elif button_id == 'nav-settings':
+        return "/settings"
+    
+    return "/"
+
+# Dashboard refresh callback
 @app.callback(
     [Output('financial-impact-chart', 'figure'),
      Output('deadline-tracker-chart', 'figure'),
@@ -851,30 +1220,24 @@ app.layout = html.Div([
      Output('risk-compliance-gauge', 'figure'),
      Output('projection-forecast-chart', 'figure'),
      Output('status-indicator', 'children')],
-    [Input('auto-refresh-interval', 'n_intervals')]
+    [Input('auto-refresh-interval', 'n_intervals'),
+     Input('refresh-data-btn', 'n_clicks')]
 )
-def update_dashboard_charts(n_intervals):
-    """
-    Auto-refresh all charts every 5 minutes
-    """
+def update_dashboard_charts(n_intervals, refresh_clicks):
     try:
-        # Regenerate data with slight variations for realistic updates
         global data
         
-        # Add small random variations to existing data
-        if n_intervals > 0:
-            # Vary financial data slightly
+        # Add small variations for realistic updates
+        if n_intervals > 0 or refresh_clicks:
             for i in range(len(data['financial']['current'])):
-                variation = random.uniform(-0.05, 0.05)  # ±5% variation
+                variation = random.uniform(-0.02, 0.02)
                 data['financial']['current'][i] = int(data['financial']['current'][i] * (1 + variation))
             
-            # Vary risk score slightly
-            data['risk_score'] = max(0, min(100, data['risk_score'] + random.uniform(-3, 3)))
+            data['risk_score'] = max(0, min(100, data['risk_score'] + random.uniform(-2, 2)))
         
-        # Create status indicator
         current_time = datetime.now().strftime('%I:%M %p')
         status_indicator = [
-            html.Span("🟢 ", style={'color': COLORS['success_green']}),
+            html.Span("● ", style={'color': COLORS['success_green'], 'font-size': '20px'}),
             html.Span(f"Live Data - Updated at {current_time}", 
                      style={'color': COLORS['neutral_text']})
         ]
@@ -892,10 +1255,9 @@ def update_dashboard_charts(n_intervals):
         )
         
     except Exception as e:
-        print(f"Error in dashboard update callback: {str(e)}")
-        # Return current figures if update fails
+        print(f"Error in dashboard update: {str(e)}")
         error_status = [
-            html.Span("🔴 ", style={'color': COLORS['danger_red']}),
+            html.Span("● ", style={'color': COLORS['danger_red'], 'font-size': '20px'}),
             html.Span("Update Error - Using Cached Data", 
                      style={'color': COLORS['neutral_text']})
         ]
@@ -912,19 +1274,40 @@ def update_dashboard_charts(n_intervals):
             error_status
         )
 
-# Health check endpoint for Render
-@app.server.route('/health')
-def health_check():
-    return {'status': 'healthy', 'timestamp': datetime.now().isoformat()}
+# PDF Export callback
+@app.callback(
+    Output("download-pdf", "data"),
+    Input("export-pdf-btn", "n_clicks"),
+    prevent_initial_call=True
+)
+def export_pdf_report(n_clicks):
+    if n_clicks:
+        try:
+            pdf_buffer = generate_pdf_report()
+            if pdf_buffer:
+                return dcc.send_bytes(pdf_buffer.getvalue(), 
+                                    filename=f"LexCura_Dashboard_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf")
+        except Exception as e:
+            print(f"Error exporting PDF: {str(e)}")
+    return None
 
-# Main application entry point
+# Google Slides callback
+@app.callback(
+    Output('url', 'pathname', allow_duplicate=True),
+    Input('open-slides-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def open_google_slides(n_clicks):
+    if n_clicks:
+        # In a real implementation, you would open the Google Slides URL
+        # For now, we'll just stay on the same page
+        return "/slides"
+    return "/slides"
+
 if __name__ == '__main__':
-    # Get port from environment variable (Render provides this)
     port = int(os.environ.get('PORT', 8050))
-    
-    # Run the app
     app.run_server(
-        debug=False,  # Never use debug=True in production
-        host='0.0.0.0',  # Required for Render
+        debug=False,
+        host='0.0.0.0',
         port=port
     )
