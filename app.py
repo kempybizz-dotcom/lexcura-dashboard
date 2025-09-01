@@ -1473,7 +1473,7 @@ app.index_string = '''
                 width: 100%;
             }
             
-            /* Enhanced KPI card styling for better readability */
+            /* Enhanced KPI card styling for maximum width and readability */
             .elite-mini-card {
                 background: linear-gradient(145deg, 
                     rgba(27, 29, 31, 0.9) 0%, 
@@ -1485,9 +1485,10 @@ app.index_string = '''
                     0 8px 25px rgba(0, 0, 0, 0.4),
                     inset 0 1px 0 rgba(255, 255, 255, 0.1);
                 transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-                min-height: 120px;
+                min-height: 130px;
                 display: flex;
                 align-items: center;
+                width: 100%;
             }
             
             .elite-mini-card:hover {
@@ -1503,24 +1504,25 @@ app.index_string = '''
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 10px;
-                margin-bottom: 8px;
+                gap: 12px;
+                margin-bottom: 10px;
             }
             
             .elite-kpi-card {
-                padding: 20px 15px !important;
+                padding: 25px 20px !important;
                 height: 100%;
+                width: 100%;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
             }
             
-            /* Better header spacing */
+            /* Better header spacing for 4/8 split */
             .elite-header {
                 background: linear-gradient(135deg, #1B1D1F 0%, #2A2D30 50%, #1B1D1F 100%);
                 border: 2px solid #D4AF37;
                 border-radius: 20px;
-                padding: 25px 30px;
+                padding: 25px 35px;
                 margin-bottom: 30px;
                 box-shadow: 
                     0 0 50px rgba(212, 175, 55, 0.2),
@@ -1528,17 +1530,18 @@ app.index_string = '''
                 position: relative;
                 overflow: hidden;
                 width: 100%;
-                min-height: 140px;
+                min-height: 150px;
                 display: flex;
                 align-items: center;
             }
             
-            /* Elite KPI container spacing */
+            /* Elite KPI container with full width utilization */
             .elite-kpi-container {
                 width: 100%;
                 height: 100%;
                 display: flex;
                 align-items: center;
+                padding-left: 10px;
             }
             
             /* Button fixes */
