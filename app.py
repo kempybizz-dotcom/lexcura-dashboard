@@ -954,15 +954,15 @@ def get_sidebar():
     return html.Div([
         html.Div("LexCura Dashboard", className="logo"),
         html.Div([
-            html.Div("Overview", id="nav-overview", className="nav-item", n_clicks=0),
-            html.Div("Analytics", id="nav-analytics", className="nav-item", n_clicks=0),
-            html.Div("Reports", id="nav-reports", className="nav-item", n_clicks=0),
-            html.Div("Google Slides", id="nav-slides", className="nav-item", n_clicks=0),
-            html.Div("Archive", id="nav-archive", className="nav-item", n_clicks=0),
-            html.Div("Settings", id="nav-settings", className="nav-item", n_clicks=0),
+            html.A("Overview", href="/", className="nav-item", style={'text-decoration': 'none'}),
+            html.A("Analytics", href="/analytics", className="nav-item", style={'text-decoration': 'none'}),
+            html.A("Reports", href="/reports", className="nav-item", style={'text-decoration': 'none'}),
+            html.A("Google Slides", href="/slides", className="nav-item", style={'text-decoration': 'none'}),
+            html.A("Archive", href="/archive", className="nav-item", style={'text-decoration': 'none'}),
+            html.A("Settings", href="/settings", className="nav-item", style={'text-decoration': 'none'}),
             html.Hr(style={'border-color': COLORS['gold_primary'], 'margin': '20px 0'}),
             html.Div("Logout", id="logout-btn", className="nav-item", n_clicks=0,
-                    style={'color': COLORS['danger_red']})
+                    style={'color': COLORS['danger_red'], 'cursor': 'pointer'})
         ])
     ], className="sidebar")
 
@@ -1170,19 +1170,28 @@ app.index_string = '''
                 transition: all 0.3s ease;
                 font-weight: 500;
                 border-left: 3px solid transparent;
+                display: block;
+                text-decoration: none !important;
             }
             
             .nav-item:hover {
                 background-color: rgba(212, 175, 55, 0.1);
-                color: #FFCF66;
+                color: #FFCF66 !important;
                 border-left-color: #D4AF37;
                 transform: translateX(5px);
+                text-decoration: none !important;
+            }
+            
+            .nav-item:visited {
+                color: #B8B9BB !important;
+                text-decoration: none !important;
             }
             
             .nav-item.active {
                 background-color: rgba(212, 175, 55, 0.2);
-                color: #FFCF66;
+                color: #FFCF66 !important;
                 border-left-color: #D4AF37;
+                text-decoration: none !important;
             }
             
             .main-content {
@@ -1381,38 +1390,36 @@ def handle_logout(n_clicks, session_data):
             del session_store[session_id]
     return {}, "/login"
 
-# Navigation callbacks
+# Additional callbacks for reports functionality
 @app.callback(
-    Output('url', 'pathname', allow_duplicate=True),
-    [Input('nav-overview', 'n_clicks'),
-     Input('nav-analytics', 'n_clicks'),
-     Input('nav-reports', 'n_clicks'),
-     Input('nav-slides', 'n_clicks'),
-     Input('nav-archive', 'n_clicks'),
-     Input('nav-settings', 'n_clicks')],
+    Output("download-pdf", "data", allow_duplicate=True),
+    [Input("exec-summary-btn", "n_clicks"),
+     Input("financial-report-btn", "n_clicks"), 
+     Input("performance-report-btn", "n_clicks")],
     prevent_initial_call=True
 )
-def handle_navigation(overview, analytics, reports, slides, archive, settings):
+def handle_report_downloads(exec_clicks, financial_clicks, performance_clicks):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return "/"
+        return None
     
     button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
-    if button_id == 'nav-overview':
-        return "/"
-    elif button_id == 'nav-analytics':
-        return "/analytics"
-    elif button_id == 'nav-reports':
-        return "/reports"
-    elif button_id == 'nav-slides':
-        return "/slides"
-    elif button_id == 'nav-archive':
-        return "/archive"
-    elif button_id == 'nav-settings':
-        return "/settings"
+    try:
+        pdf_buffer = generate_pdf_report()
+        if pdf_buffer:
+            if button_id == "exec-summary-btn":
+                filename = f"LexCura_Executive_Summary_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+            elif button_id == "financial-report-btn":
+                filename = f"LexCura_Financial_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+            else:
+                filename = f"LexCura_Performance_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+            
+            return dcc.send_bytes(pdf_buffer.getvalue(), filename=filename)
+    except Exception as e:
+        print(f"Error in report download: {str(e)}")
     
-    return "/"
+    return None
 
 # Dashboard refresh callback
 @app.callback(
