@@ -700,7 +700,7 @@ def get_login_layout():
 # Analytics page layout - Different view of the same data
 def get_analytics_layout():
     return html.Div([
-        get_sidebar("/analytics"),
+        get_sidebar(),
         html.Div([
             get_header("Advanced Analytics"),
             dbc.Container([
@@ -976,32 +976,20 @@ def get_google_slides_layout():
         ], className="main-content", style={'margin-left': '280px', 'padding': '20px'})
     ])
 
-def get_sidebar(current_path="/"):
-    """Sidebar with active page highlighting"""
-    nav_items = [
-        ("Overview", "/", current_path == "/"),
-        ("Analytics", "/analytics", current_path == "/analytics"),
-        ("Reports", "/reports", current_path == "/reports"),
-        ("Google Slides", "/slides", current_path == "/slides"),
-        ("Archive", "/archive", current_path == "/archive"),
-        ("Settings", "/settings", current_path == "/settings")
-    ]
-    
-    nav_elements = []
-    for title, href, is_active in nav_items:
-        class_name = "nav-item active" if is_active else "nav-item"
-        nav_elements.append(
-            html.A(title, href=href, className=class_name, 
-                   style={'text-decoration': 'none'})
-        )
-    
+def get_sidebar():
+    """Simple sidebar with text labels only - no navigation buttons"""
     return html.Div([
         html.Div("LexCura Dashboard", className="logo"),
         html.Div([
-            *nav_elements,
+            html.Div("Overview", className="nav-item-display"),
+            html.Div("Analytics", className="nav-item-display"),
+            html.Div("Reports", className="nav-item-display"),
+            html.Div("Google Slides", className="nav-item-display"),
+            html.Div("Archive", className="nav-item-display"),
+            html.Div("Settings", className="nav-item-display"),
             html.Hr(style={'border-color': COLORS['gold_primary'], 'margin': '20px 0'}),
-            html.Div("Logout", id="logout-btn", className="nav-item", n_clicks=0,
-                    style={'color': COLORS['danger_red'], 'cursor': 'pointer'})
+            dbc.Button("Logout", id="logout-btn", color="danger", size="sm",
+                      style={'width': '100%', 'margin': '0 20px'})
         ])
     ], className="sidebar")
 
@@ -1200,30 +1188,28 @@ app.index_string = '''
                 text-align: center;
             }
             
-            .nav-item {
+            /* Nav display items - non-clickable labels */
+            .nav-item-display {
                 color: #B8B9BB;
                 padding: 15px 20px;
                 margin: 8px 0;
                 border-radius: 8px;
-                cursor: pointer;
-                transition: all 0.3s ease;
                 font-weight: 500;
                 border-left: 3px solid transparent;
-                display: block;
-                text-decoration: none !important;
+                opacity: 0.7;
+                cursor: default;
             }
             
-            .nav-item:hover {
-                background-color: rgba(212, 175, 55, 0.1);
-                color: #FFCF66 !important;
-                border-left-color: #D4AF37;
-                transform: translateX(5px);
-                text-decoration: none !important;
+            /* Logout button enhancement */
+            #logout-btn {
+                transition: all 0.3s ease;
+                border-radius: 8px !important;
+                font-weight: 500;
             }
             
-            .nav-item:visited {
-                color: #B8B9BB !important;
-                text-decoration: none !important;
+            #logout-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(228, 87, 76, 0.4);
             }
             
             .nav-item.active {
@@ -1401,7 +1387,7 @@ app.layout = html.Div([
     html.Div(id='page-content')
 ])
 
-# Callback for page routing with ROBUST authentication
+# Simplified page routing - only dashboard/login
 @app.callback(
     Output('page-content', 'children'),
     [Input('url', 'pathname')],
@@ -1410,38 +1396,16 @@ app.layout = html.Div([
     prevent_initial_call=False
 )
 def display_page(pathname, session_data, user_data):
-    """Display appropriate page based on authentication and route"""
-    
-    # Debug print (remove in production)
-    print(f"Navigation to: {pathname}")
-    print(f"Session data: {session_data}")
-    print(f"User data: {user_data}")
+    """Display dashboard or login based on authentication"""
     
     # Check authentication using enhanced method
     authenticated = is_authenticated(session_data, user_data)
     
     if not authenticated:
-        print("Not authenticated, showing login")
         return get_login_layout()
     
-    print(f"Authenticated, showing page: {pathname}")
-    
-    # Route to appropriate page with active navigation
-    if pathname == '/analytics':
-        return get_analytics_layout()
-    elif pathname == '/reports':
-        return get_reports_layout()
-    elif pathname == '/slides':
-        return get_google_slides_layout()
-    elif pathname == '/archive':
-        return get_archive_layout()  
-    elif pathname == '/settings':
-        return get_settings_layout()
-    elif pathname == '/login':
-        # If authenticated but trying to access login, redirect to dashboard
-        return get_dashboard_layout()
-    else:
-        return get_dashboard_layout()  # Default overview page
+    # For now, always show dashboard regardless of path
+    return get_dashboard_layout()
 
 # Login callback with improved session handling
 @app.callback(
@@ -1561,7 +1525,8 @@ def update_dashboard_charts(n_intervals, refresh_clicks):
         
         current_time = datetime.now().strftime('%I:%M %p')
         status_indicator = [
-            html.Span("● ", style={'color': COLORS['success_green'], 'font-size': '20px'}),
+            html.Span("● ", className="status-dot", 
+                     style={'color': COLORS['success_green'], 'font-size': '20px'}),
             html.Span(f"Live Data - Updated at {current_time}", 
                      style={'color': COLORS['neutral_text']})
         ]
