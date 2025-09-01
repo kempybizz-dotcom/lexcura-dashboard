@@ -634,7 +634,7 @@ def generate_pdf_report():
         print(f"Error generating PDF: {str(e)}")
         return None
 
-# Login page layout
+# Login page layout with animations
 def get_login_layout():
     return dbc.Container([
         dbc.Row([
@@ -648,27 +648,36 @@ def get_login_layout():
                             dbc.Form([
                                 dbc.Row([
                                     dbc.Label("Username", html_for="username-input"),
-                                    dbc.Input(id="username-input", type="text", placeholder="Enter username"),
+                                    dbc.Input(id="username-input", type="text", placeholder="Enter username",
+                                             className="mb-2"),
                                 ], className="mb-3"),
                                 dbc.Row([
                                     dbc.Label("Password", html_for="password-input"),
-                                    dbc.Input(id="password-input", type="password", placeholder="Enter password"),
+                                    dbc.Input(id="password-input", type="password", placeholder="Enter password",
+                                             className="mb-2"),
                                 ], className="mb-3"),
                                 dbc.Row([
                                     dbc.Col([
                                         dbc.Button("Login", id="login-button", color="warning", 
-                                                 className="w-100", style={'background-color': COLORS['gold_primary'],
-                                                                          'border-color': COLORS['gold_primary']})
+                                                 className="w-100", 
+                                                 style={'background-color': COLORS['gold_primary'],
+                                                       'border-color': COLORS['gold_primary'],
+                                                       'font-weight': '600',
+                                                       'padding': '12px'})
                                     ])
                                 ])
                             ]),
                             html.Div(id="login-alert", className="mt-3")
                         ])
                     ])
-                ], style={'background-color': COLORS['dark_grey'], 'border': f'2px solid {COLORS["gold_primary"]}'}),
+                ], className="login-card", style={'background-color': COLORS['dark_grey'], 
+                                                  'border': f'2px solid {COLORS["gold_primary"]}',
+                                                  'border-radius': '15px',
+                                                  'box-shadow': '0 10px 30px rgba(0, 0, 0, 0.5)'}),
             ], width=6, lg=4)
         ], justify="center", className="min-vh-100 align-items-center"),
-        dcc.Store(id='session-store')
+        dcc.Store(id='session-store'),
+        dcc.Store(id='current-user')
     ], fluid=True, style={'background-color': COLORS['charcoal']})
 
 # Analytics page layout - Different view of the same data
@@ -1285,18 +1294,61 @@ app.index_string = '''
                 }
             }
             
-            /* Scrollbar styling */
-            ::-webkit-scrollbar {
-                width: 8px;
+            /* Login button animation */
+            #login-button {
+                transition: all 0.3s ease;
+                transform: scale(1);
+                box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
             }
             
-            ::-webkit-scrollbar-track {
-                background: #0F1113;
+            #login-button:hover {
+                transform: scale(1.05);
+                box-shadow: 0 6px 25px rgba(212, 175, 55, 0.5);
+                background-color: #FFCF66 !important;
             }
             
-            ::-webkit-scrollbar-thumb {
-                background: #D4AF37;
-                border-radius: 4px;
+            #login-button:active {
+                transform: scale(0.98);
+                transition: all 0.1s ease;
+            }
+            
+            /* Input field styling */
+            .form-control:focus {
+                border-color: #D4AF37 !important;
+                box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.25) !important;
+            }
+            
+            /* Card animation */
+            .login-card {
+                animation: slideInUp 0.6s ease-out;
+                transform: translateY(0);
+            }
+            
+            @keyframes slideInUp {
+                from {
+                    transform: translateY(30px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            
+            /* Success alert animation */
+            .alert {
+                animation: fadeInDown 0.5s ease-out;
+            }
+            
+            @keyframes fadeInDown {
+                from {
+                    transform: translateY(-20px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
             }
         </style>
     </head>
@@ -1311,24 +1363,34 @@ app.index_string = '''
 </html>
 '''
 
-# Main app layout with URL routing
+# Main app layout with URL routing and session preservation
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     dcc.Store(id='session-store', storage_type='session'),
+    dcc.Store(id='current-user', storage_type='session'),  # Additional session store
     html.Div(id='page-content')
 ])
 
-# Callback for page routing and authentication
+# Callback for page routing and authentication with better session handling
 @app.callback(
     Output('page-content', 'children'),
-    Input('url', 'pathname'),
-    State('session-store', 'data')
+    [Input('url', 'pathname')],
+    [State('session-store', 'data'),
+     State('current-user', 'data')]
 )
-def display_page(pathname, session_data):
-    session_id = session_data.get('session_id') if session_data else None
+def display_page(pathname, session_data, user_data):
+    # Check multiple sources for authentication
+    is_authenticated_user = False
     
-    # Check authentication
-    if not session_id or not is_authenticated(session_id):
+    if session_data and session_data.get('authenticated'):
+        is_authenticated_user = True
+    elif user_data and user_data.get('session_id'):
+        session_id = user_data.get('session_id')
+        if session_id in session_store:
+            is_authenticated_user = True
+    
+    # If not authenticated, show login
+    if not is_authenticated_user:
         return get_login_layout()
     
     # Route to appropriate page
@@ -1342,12 +1404,15 @@ def display_page(pathname, session_data):
         return get_archive_layout()
     elif pathname == '/settings':
         return get_settings_layout()
+    elif pathname == '/login':
+        return get_login_layout()
     else:
         return get_dashboard_layout()  # Default overview page
 
-# Login callback
+# Login callback with improved session handling
 @app.callback(
     [Output('session-store', 'data'),
+     Output('current-user', 'data'),
      Output('login-alert', 'children'),
      Output('url', 'pathname')],
     Input('login-button', 'n_clicks'),
@@ -1358,37 +1423,50 @@ def handle_login(n_clicks, username, password):
     if n_clicks and username and password:
         if verify_credentials(username, password):
             session_id = generate_session_id()
-            session_store[session_id] = {
+            session_data = {
                 'username': username,
-                'login_time': datetime.now()
+                'login_time': datetime.now().isoformat(),
+                'authenticated': True
             }
+            session_store[session_id] = session_data
+            
             return (
-                {'session_id': session_id, 'username': username},
-                dbc.Alert("Login successful!", color="success"),
+                {'session_id': session_id, 'authenticated': True},
+                {'username': username, 'session_id': session_id},
+                dbc.Alert("Login successful! Redirecting...", color="success"),
                 "/"
             )
         else:
             return (
+                {'authenticated': False},
                 {},
                 dbc.Alert("Invalid credentials. Please try again.", color="danger"),
                 "/login"
             )
-    return {}, "", "/login"
+    return {'authenticated': False}, {}, "", "/login"
 
-# Logout callback
+# Logout callback with better cleanup
 @app.callback(
     [Output('session-store', 'data', allow_duplicate=True),
+     Output('current-user', 'data', allow_duplicate=True),
      Output('url', 'pathname', allow_duplicate=True)],
     Input('logout-btn', 'n_clicks'),
-    State('session-store', 'data'),
+    [State('session-store', 'data'),
+     State('current-user', 'data')],
     prevent_initial_call=True
 )
-def handle_logout(n_clicks, session_data):
-    if n_clicks and session_data:
-        session_id = session_data.get('session_id')
-        if session_id in session_store:
-            del session_store[session_id]
-    return {}, "/login"
+def handle_logout(n_clicks, session_data, user_data):
+    if n_clicks:
+        # Clean up session store
+        if session_data and session_data.get('session_id'):
+            session_id = session_data.get('session_id')
+            if session_id in session_store:
+                del session_store[session_id]
+        
+        # Clear all session data
+        return {'authenticated': False}, {}, "/login"
+    
+    return session_data or {'authenticated': False}, user_data or {}, "/"
 
 # Additional callbacks for reports functionality
 @app.callback(
