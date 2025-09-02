@@ -1057,7 +1057,7 @@ def get_sidebar():
     ], className="sidebar")
 
 def get_header(title="Executive Business Intelligence Dashboard"):
-    """Elite header with advanced metrics and real-time indicators"""
+    """Elite header with enhanced KPI cards and shining effect"""
     return html.Div([
         dbc.Row([
             dbc.Col([
@@ -1078,9 +1078,9 @@ def get_header(title="Executive Business Intelligence Dashboard"):
                         ], style={'color': COLORS['success_green']})
                     ], className="header-subtext")
                 ])
-            ], width=7),
+            ], width=12, lg=6),
             dbc.Col([
-                # Elite KPI Cards
+                # Enhanced KPI Cards with more width
                 html.Div([
                     dbc.Row([
                         dbc.Col([
@@ -1088,18 +1088,18 @@ def get_header(title="Executive Business Intelligence Dashboard"):
                                 dbc.CardBody([
                                     html.Div([
                                         html.I(className="fas fa-dollar-sign", 
-                                               style={'color': COLORS['gold_primary'], 'font-size': '18px'}),
+                                               style={'color': COLORS['gold_primary'], 'font-size': '20px'}),
                                         html.H4("$2.85M", 
-                                               style={'color': COLORS['gold_primary'], 'margin': '5px 0 0 0', 'font-weight': '700'})
+                                               style={'color': COLORS['gold_primary'], 'margin': '0', 'font-weight': '700', 'font-size': '26px'})
                                     ], className="kpi-icon-value"),
                                     html.Small("Total Revenue", 
-                                              style={'color': COLORS['neutral_text'], 'font-weight': '500'}),
+                                              style={'color': COLORS['neutral_text'], 'font-weight': '500', 'font-size': '13px'}),
                                     html.Div([
                                         html.I(className="fas fa-arrow-up", 
                                                style={'color': COLORS['success_green'], 'font-size': '12px'}),
-                                        html.Span(" +12.5%", style={'color': COLORS['success_green'], 'font-size': '12px'})
+                                        html.Span(" +12.5%", style={'color': COLORS['success_green'], 'font-size': '13px', 'font-weight': '600'})
                                     ])
-                                ], className="text-center elite-kpi-card")
+                                ], className="elite-kpi-card")
                             ], className="elite-mini-card floating")
                         ], width=4),
                         dbc.Col([
@@ -1107,18 +1107,18 @@ def get_header(title="Executive Business Intelligence Dashboard"):
                                 dbc.CardBody([
                                     html.Div([
                                         html.I(className="fas fa-exclamation-triangle", 
-                                               style={'color': COLORS['warning_orange'], 'font-size': '18px'}),
+                                               style={'color': COLORS['warning_orange'], 'font-size': '20px'}),
                                         html.H4("74", 
-                                               style={'color': COLORS['warning_orange'], 'margin': '5px 0 0 0', 'font-weight': '700'})
+                                               style={'color': COLORS['warning_orange'], 'margin': '0', 'font-weight': '700', 'font-size': '26px'})
                                     ], className="kpi-icon-value"),
                                     html.Small("Active Alerts", 
-                                              style={'color': COLORS['neutral_text'], 'font-weight': '500'}),
+                                              style={'color': COLORS['neutral_text'], 'font-weight': '500', 'font-size': '13px'}),
                                     html.Div([
                                         html.I(className="fas fa-arrow-down", 
                                                style={'color': COLORS['success_green'], 'font-size': '12px'}),
-                                        html.Span(" -8", style={'color': COLORS['success_green'], 'font-size': '12px'})
+                                        html.Span(" -8", style={'color': COLORS['success_green'], 'font-size': '13px', 'font-weight': '600'})
                                     ])
-                                ], className="text-center elite-kpi-card")
+                                ], className="elite-kpi-card")
                             ], className="elite-mini-card floating")
                         ], width=4),
                         dbc.Col([
@@ -1126,23 +1126,23 @@ def get_header(title="Executive Business Intelligence Dashboard"):
                                 dbc.CardBody([
                                     html.Div([
                                         html.I(className="fas fa-shield-alt", 
-                                               style={'color': COLORS['success_green'], 'font-size': '18px'}),
+                                               style={'color': COLORS['success_green'], 'font-size': '20px'}),
                                         html.H4("99.9%", 
-                                               style={'color': COLORS['success_green'], 'margin': '5px 0 0 0', 'font-weight': '700'})
+                                               style={'color': COLORS['success_green'], 'margin': '0', 'font-weight': '700', 'font-size': '26px'})
                                     ], className="kpi-icon-value"),
                                     html.Small("System Uptime", 
-                                              style={'color': COLORS['neutral_text'], 'font-weight': '500'}),
+                                              style={'color': COLORS['neutral_text'], 'font-weight': '500', 'font-size': '13px'}),
                                     html.Div([
                                         html.I(className="fas fa-check", 
                                                style={'color': COLORS['success_green'], 'font-size': '12px'}),
-                                        html.Span(" Stable", style={'color': COLORS['success_green'], 'font-size': '12px'})
+                                        html.Span(" Stable", style={'color': COLORS['success_green'], 'font-size': '13px', 'font-weight': '600'})
                                     ])
-                                ], className="text-center elite-kpi-card")
+                                ], className="elite-kpi-card")
                             ], className="elite-mini-card floating")
                         ], width=4)
-                    ], className="g-2")
+                    ], className="g-3")  # Increased gap between cards
                 ], className="elite-kpi-container")
-            ], width=5)
+            ], width=12, lg=6)
         ], align="center")
     ], className="header elite-header")
 
@@ -1453,12 +1453,12 @@ app.index_string = '''
                 width: 100%;
             }
             
-            /* Fix header layout */
+            /* Fix header layout - wider KPI cards */
             .elite-header {
                 background: linear-gradient(135deg, #1B1D1F 0%, #2A2D30 50%, #1B1D1F 100%);
                 border: 2px solid #D4AF37;
                 border-radius: 20px;
-                padding: 20px;
+                padding: 25px 30px;
                 margin-bottom: 25px;
                 box-shadow: 
                     0 0 50px rgba(212, 175, 55, 0.2),
@@ -1468,80 +1468,108 @@ app.index_string = '''
                 width: 100%;
             }
             
-            /* Fix KPI cards layout */
-            .elite-kpi-container {
-                width: 100%;
+            .elite-header::before {
+                content: '';
+                position: absolute;
+                top: -2px;
+                left: -2px;
+                right: -2px;
+                bottom: -2px;
+                background: linear-gradient(45deg, #D4AF37, #FFCF66, #D4AF37, #FFCF66);
+                z-index: -1;
+                border-radius: 20px;
+                background-size: 400% 400%;
+                animation: gradientBorder 4s ease infinite;
             }
             
-            /* Enhanced KPI card styling for maximum width and readability */
+            /* SHINING EFFECT ON MAIN HEADER */
+            .elite-header::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, 
+                    transparent 0%, 
+                    rgba(255, 255, 255, 0.4) 30%, 
+                    rgba(212, 175, 55, 0.6) 50%,
+                    rgba(255, 255, 255, 0.4) 70%, 
+                    transparent 100%);
+                animation: headerShine 6s ease-in-out infinite;
+                pointer-events: none;
+                z-index: 1;
+            }
+            
+            @keyframes headerShine {
+                0% { left: -100%; }
+                50% { left: 100%; }
+                100% { left: 100%; }
+            }
+            
+            /* WIDER KPI CARDS - Fixed text overflow */
+            .elite-kpi-container {
+                width: 100%;
+                min-width: 500px;
+            }
+            
             .elite-mini-card {
                 background: linear-gradient(145deg, 
                     rgba(27, 29, 31, 0.9) 0%, 
                     rgba(42, 45, 48, 0.9) 100%) !important;
                 border: 1px solid rgba(212, 175, 55, 0.3) !important;
-                border-radius: 15px !important;
+                border-radius: 12px !important;
                 backdrop-filter: blur(20px);
                 box-shadow: 
-                    0 8px 25px rgba(0, 0, 0, 0.4),
+                    0 6px 20px rgba(0, 0, 0, 0.4),
                     inset 0 1px 0 rgba(255, 255, 255, 0.1);
-                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-                min-height: 130px;
-                display: flex;
-                align-items: center;
-                width: 100%;
+                transition: all 0.3s ease !important;
+                height: 100%;
+                min-height: 120px;
+                min-width: 140px;
             }
             
-            .elite-mini-card:hover {
-                transform: translateY(-8px) scale(1.03) !important;
-                border-color: rgba(212, 175, 55, 0.6) !important;
-                box-shadow: 
-                    0 20px 50px rgba(0, 0, 0, 0.6),
-                    0 0 30px rgba(212, 175, 55, 0.3),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            .elite-kpi-card {
+                padding: 20px 15px !important;
+                text-align: center;
+                min-height: 100px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
             }
             
             .kpi-icon-value {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 12px;
-                margin-bottom: 10px;
+                gap: 10px;
+                margin-bottom: 8px;
+                flex-wrap: nowrap;
+                white-space: nowrap;
             }
             
-            .elite-kpi-card {
-                padding: 25px 20px !important;
-                height: 100%;
-                width: 100%;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
+            .kpi-icon-value h4 {
+                margin: 0 !important;
+                font-size: 24px !important;
+                font-weight: 700 !important;
+                white-space: nowrap;
+                overflow: visible;
             }
             
-            /* Better header spacing for 4/8 split */
-            .elite-header {
-                background: linear-gradient(135deg, #1B1D1F 0%, #2A2D30 50%, #1B1D1F 100%);
-                border: 2px solid #D4AF37;
-                border-radius: 20px;
-                padding: 25px 35px;
-                margin-bottom: 30px;
-                box-shadow: 
-                    0 0 50px rgba(212, 175, 55, 0.2),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-                position: relative;
-                overflow: hidden;
+            /* Ensure text doesn't break */
+            .elite-kpi-card small {
+                font-size: 12px !important;
+                white-space: nowrap !important;
+                margin-bottom: 5px;
+                display: block;
                 width: 100%;
-                min-height: 150px;
-                display: flex;
-                align-items: center;
             }
             
-            /* Elite KPI container with full width utilization */
-            .elite-kpi-container {
-                width: 100%;
-                height: 100%;
-                display: flex;
-                align-items: center;
-                padding-left: 10px;
+            .elite-kpi-card div:last-child {
+                white-space: nowrap !important;
+                font-size: 11px !important;
+                margin-top: 5px;
             }
             
             /* Button fixes */
